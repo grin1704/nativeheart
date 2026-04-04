@@ -1,0 +1,23 @@
+# Этот конфиг используется ТОЛЬКО при первом запуске для получения SSL сертификата.
+# Шаги:
+# 1. Переименуй app.conf -> app.conf.disabled
+# 2. Переименуй этот файл -> app-init.conf
+# 3. Запусти: docker compose -f docker-compose.prod.yml up -d nginx
+# 4. Получи сертификат: docker compose -f docker-compose.prod.yml run --rm certbot certonly --webroot -w /var/www/certbot -d nativeheart.ru -d www.nativeheart.ru --email your@email.com --agree-tos
+# 5. Верни обратно: app-init.conf -> app-init.conf.disabled, app.conf.disabled -> app.conf
+# 6. Перезапусти nginx: docker compose -f docker-compose.prod.yml restart nginx
+
+server {
+    listen 80;
+    server_name nativeheart.ru www.nativeheart.ru;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        proxy_pass http://frontend:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
