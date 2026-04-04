@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { memorialPageController } from '../controllers/memorialPageController';
+import { requireAuth } from '../middleware/auth';
+
+const router = Router();
+
+// Routes that require authentication
+router.post('/', requireAuth, memorialPageController.createMemorialPage);
+router.get('/my', requireAuth, memorialPageController.getUserMemorialPages);
+router.get('/:id', requireAuth, memorialPageController.getMemorialPage);
+
+// Public routes
+router.get('/slug/:slug', memorialPageController.getMemorialPageBySlug);
+
+export default router;

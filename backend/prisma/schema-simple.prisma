@@ -1,0 +1,67 @@
+// Упрощенная схема для тестирования с SQLite
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String    @map("password_hash")
+  name                  String
+  subscriptionType      String    @default("trial") @map("subscription_type")
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  memorialPages MemorialPage[]
+  mediaFiles    MediaFile[]
+
+  @@map("users")
+}
+
+model MemorialPage {
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  ownerId       String    @map("owner_id")
+  fullName      String    @map("full_name")
+  birthDate     DateTime  @map("birth_date")
+  deathDate     DateTime  @map("death_date")
+  mainPhotoId   String?   @map("main_photo_id")
+  biographyText String?   @map("biography_text")
+  isPrivate     Boolean   @default(false) @map("is_private")
+  passwordHash  String?   @map("password_hash")
+  qrCodeUrl     String?   @map("qr_code_url")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  owner     User       @relation(fields: [ownerId], references: [id])
+  mainPhoto MediaFile? @relation("MainPhoto", fields: [mainPhotoId], references: [id])
+
+  @@map("memorial_pages")
+}
+
+model MediaFile {
+  id           String    @id @default(uuid())
+  ownerId      String    @map("owner_id")
+  originalName String    @map("original_name")
+  filename     String
+  url          String
+  thumbnailUrl String?   @map("thumbnail_url")
+  size         Int
+  mimeType     String    @map("mime_type")
+  uploadedAt   DateTime  @default(now()) @map("uploaded_at")
+
+  // Relations
+  owner              User           @relation(fields: [ownerId], references: [id])
+  mainPhotoPages     MemorialPage[] @relation("MainPhoto")
+
+  @@map("media_files")
+}

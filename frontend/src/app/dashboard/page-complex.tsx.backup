@@ -1,0 +1,227 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiRequest } from '@/utils/api';
+import SubscriptionStatus from '@/components/SubscriptionStatus';
+import MemorialPageCard from '@/components/MemorialPageCard';
+import type { User, MemorialPage } from '@/types';
+
+export default function Dashboard() {
+  const [user, setUser] = useState<User | null>(null);
+  const [memorialPages, setMemorialPages] = useState<MemorialPage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    loadUserData();
+  }, [router]);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Загружаем данные пользователя
+      const userResponse = await apiRequest('GET', '/auth/me');
+      if (!userResponse.success) {
+        throw new Error(userResponse.error || 'Ошибка загрузки данных пользователя');
+      }
+      setUser(userResponse.data.user);
+
+      // Загружаем памятные страницы пользователя
+      const pagesResponse = await apiRequest('GET', '/memorial-pages/my');
+      if (!pagesResponse.success) {
+        throw new Error(pagesResponse.error || 'Ошибка загрузки страниц');
+      }
+      setMemorialPages(pagesResponse.data.data || pagesResponse.data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Произошла ошибка');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/');
+  };
+
+  const handleCreatePage = () => {
+    router.push('/dashboard/create');
+  };
+
+  const handleEditPage = (pageId: string) => {
+    router.push(`/dashboard/edit/${pageId}`);
+  };
+
+  const handleViewPage = (slug: string) => {
+    router.push(`/memorial/${slug}`);
+  };
+
+  const handleDeletePage = async (pageId: string) => {
+    try {
+      const response = await apiRequest('DELETE', `/memorial-pages/${pageId}`);
+      if (response.success) {
+        setMemorialPages(prev => prev.filter(page => page.id !== pageId));
+      } else {
+        setError(response.error || 'Ошибка удаления страницы');
+      }
+    } catch (err) {
+      setError('Ошибка удаления страницы');
+    }
+  };
+
+  const handleSubscriptionChange = async (newType: 'trial' | 'free' | 'premium') => {
+    try {
+      const response = await apiRequest('PATCH', '/auth/subscription', {
+        subscriptionType: newType
+      });
+      
+      if (response.success) {
+        setUser(prev => prev ? { ...prev, subscriptionType: newType } : null);
+      } else {
+        setError(response.error || 'Ошибка изменения подписки');
+      }
+    } catch (err) {
+      setError('Ошибка изменения подписки');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadUserData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Попробовать снова
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Панель управления</h1>
+              <p className="text-gray-600">Добро пожаловать, {user?.name}</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleLogout}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Выйти
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-500 hover:text-red-700 text-sm mt-2"
+            >
+              Закрыть
+            </button>
+          </div>
+        )}
+
+        {/* Subscription Status */}
+        {user && (
+          <div className="mb-8">
+            <SubscriptionStatus
+              user={user}
+              onSubscriptionChange={handleSubscriptionChange}
+            />
+          </div>
+        )}
+
+        {/* Memorial Pages */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Мои памятные страницы</h2>
+              <p className="text-sm text-gray-600">
+                {memorialPages.length === 0 
+                  ? 'У вас пока нет памятных страниц' 
+                  : `Всего страниц: ${memorialPages.length}`
+                }
+              </p>
+            </div>
+            <button
+              onClick={handleCreatePage}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            >
+              + Создать страницу
+            </button>
+          </div>
+          
+          <div className="p-6">
+            {memorialPages.length === 0 ? (
+              <div className="text-center py-12">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Нет памятных страниц</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Создайте первую памятную страницу для сохранения памяти о близком человеке.
+                </p>
+                <div className="mt-6">
+                  <button
+                    onClick={handleCreatePage}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Создать первую страницу
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {memorialPages.map((page) => (
+                  <MemorialPageCard
+                    key={page.id}
+                    page={page}
+                    onEdit={handleEditPage}
+                    onView={handleViewPage}
+                    onDelete={handleDeletePage}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

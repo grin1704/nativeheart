@@ -1,0 +1,96 @@
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 222 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 15% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 15% 10%;
+
+    --primary: 158 28% 68%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 16% 94%;
+    --secondary-foreground: 222 15% 20%;
+
+    --muted: 210 16% 94%;
+    --muted-foreground: 222 10% 45%;
+
+    --accent: 210 20% 92%;
+    --accent-foreground: 222 15% 15%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 18% 90%;
+    --input: 210 18% 90%;
+    --ring: 158 28% 50%;
+
+    --radius: 0.75rem;
+
+    --ever-hero-overlay: 0 0% 100% / 0.78;
+  }
+
+  .dark {
+    --background: 222 15% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 222 15% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 222 15% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 158 45% 55%;
+    --primary-foreground: 222 15% 8%;
+
+    --secondary: 222 15% 18%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 222 15% 18%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 222 18% 20%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 222 15% 22%;
+    --input: 222 15% 22%;
+    --ring: 158 45% 60%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-tight;
+  }
+
+  .ever-prose {
+    @apply text-base leading-relaxed text-foreground;
+  }
+
+  .ever-prose-muted {
+    @apply text-sm leading-relaxed text-muted-foreground;
+  }
+
+  .ever-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ever-no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .ever-hero-bg {
+    background-image: url("https://www.online-tribute.com/memorial/static/beach-sunset.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+}

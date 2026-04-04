@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model admin_audit_logs {
+  id            String      @id
+  admin_user_id String
+  action        String
+  resource_type String
+  resource_id   String?
+  details       Json?
+  ip_address    String?
+  created_at    DateTime    @default(now())
+  admin_users   admin_users @relation(fields: [admin_user_id], references: [id])
+}
+
+model admin_permissions {
+  id            String      @id
+  admin_user_id String
+  resource      String
+  actions       String[]
+  admin_users   admin_users @relation(fields: [admin_user_id], references: [id])
+}
+
+model admin_users {
+  id                 String               @id
+  email              String               @unique
+  password_hash      String
+  name               String
+  role               String               @default("moderator")
+  is_active          Boolean              @default(true)
+  created_at         DateTime             @default(now())
+  last_login         DateTime?
+  admin_audit_logs   admin_audit_logs[]
+  admin_permissions  admin_permissions[]
+  content_moderation content_moderation[]
+}
+
+model biography_photos {
+  id               String         @id
+  memorial_page_id String
+  media_file_id    String
+  order_index      Int            @default(0)
+  created_at       DateTime       @default(now())
+  media_files      media_files    @relation(fields: [media_file_id], references: [id], onDelete: Cascade)
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id], onDelete: Cascade)
+
+  @@unique([memorial_page_id, media_file_id])
+  @@index([memorial_page_id])
+}
+
+model burial_locations {
+  id               String         @id
+  memorial_page_id String         @unique
+  address          String
+  description      String?
+  latitude         Decimal?       @db.Decimal(10, 8)
+  longitude        Decimal?       @db.Decimal(11, 8)
+  instructions     String?
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id])
+}
+
+model collaborators {
+  id               String         @id
+  memorial_page_id String
+  user_id          String
+  permissions      String         @default("edit")
+  invited_at       DateTime       @default(now())
+  accepted_at      DateTime?
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id])
+  users            users          @relation(fields: [user_id], references: [id])
+}
+
+model content_moderation {
+  id           String       @id
+  content_type String
+  content_id   String
+  status       String       @default("pending")
+  moderator_id String?
+  reason       String?
+  moderated_at DateTime?
+  created_at   DateTime     @default(now())
+  admin_users  admin_users? @relation(fields: [moderator_id], references: [id])
+}
+
+model media_files {
+  id                                                       String             @id
+  original_name                                            String
+  url                                                      String
+  thumbnail_url                                            String?
+  size                                                     Int
+  mime_type                                                String
+  uploaded_by                                              String?
+  uploaded_at                                              DateTime           @default(now())
+  biography_photos                                         biography_photos[]
+  users                                                    users?             @relation(fields: [uploaded_by], references: [id])
+  memorial_pages_memorial_pages_main_photo_idTomedia_files memorial_pages[]   @relation("memorial_pages_main_photo_idTomedia_files")
+  memory_photos                                            memory_photos[]
+  photo_gallery                                            photo_gallery[]
+  tributes                                                 tributes[]
+  video_gallery                                            video_gallery[]
+  memorial_pages_PageMedia                                 memorial_pages[]   @relation("PageMedia")
+}
+
+model memorial_pages {
+  id                                                    String             @id
+  slug                                                  String             @unique
+  owner_id                                              String
+  full_name                                             String
+  birth_date                                            DateTime           @db.Date
+  death_date                                            DateTime           @db.Date
+  main_photo_id                                         String?
+  biography_text                                        String?
+  is_private                                            Boolean            @default(false)
+  password_hash                                         String?
+  qr_code_url                                           String?
+  created_at                                            DateTime           @default(now())
+  updated_at                                            DateTime
+  biography_photos                                      biography_photos[]
+  burial_locations                                      burial_locations?
+  collaborators                                         collaborators[]
+  media_files_memorial_pages_main_photo_idTomedia_files media_files?       @relation("memorial_pages_main_photo_idTomedia_files", fields: [main_photo_id], references: [id])
+  users                                                 users              @relation(fields: [owner_id], references: [id])
+  memories                                              memories[]
+  photo_gallery                                         photo_gallery[]
+  timeline_events                                       timeline_events[]
+  tributes                                              tributes[]
+  video_gallery                                         video_gallery[]
+  media_files_PageMedia                                 media_files[]      @relation("PageMedia")
+}
+
+model memories {
+  id               String          @id
+  memorial_page_id String
+  date             DateTime        @db.Date
+  title            String
+  description      String?
+  created_at       DateTime        @default(now())
+  memorial_pages   memorial_pages  @relation(fields: [memorial_page_id], references: [id], onDelete: Cascade)
+  memory_photos    memory_photos[]
+
+  @@index([memorial_page_id])
+}
+
+model memory_photos {
+  id            String      @id
+  memory_id     String
+  media_file_id String
+  order_index   Int         @default(0)
+  created_at    DateTime    @default(now())
+  media_files   media_files @relation(fields: [media_file_id], references: [id], onDelete: Cascade)
+  memories      memories    @relation(fields: [memory_id], references: [id], onDelete: Cascade)
+
+  @@unique([memory_id, media_file_id])
+  @@index([memory_id])
+}
+
+model photo_gallery {
+  id               String         @id
+  memorial_page_id String
+  media_file_id    String
+  title            String?
+  description      String?
+  order_index      Int            @default(0)
+  created_at       DateTime       @default(now())
+  media_files      media_files    @relation(fields: [media_file_id], references: [id], onDelete: Cascade)
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id], onDelete: Cascade)
+
+  @@unique([memorial_page_id, media_file_id])
+  @@index([memorial_page_id])
+}
+
+model system_settings {
+  id          String   @id
+  key         String   @unique
+  value       Json
+  description String?
+  updated_by  String?
+  updated_at  DateTime @default(now())
+}
+
+model timeline_events {
+  id               String         @id
+  memorial_page_id String
+  year             Int
+  description      String
+  order_index      Int            @default(0)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id], onDelete: Cascade)
+
+  @@index([memorial_page_id])
+}
+
+model tributes {
+  id               String         @id
+  memorial_page_id String
+  author_name      String
+  author_email     String?
+  text             String
+  photo_id         String?
+  is_approved      Boolean        @default(false)
+  created_at       DateTime       @default(now())
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id])
+  media_files      media_files?   @relation(fields: [photo_id], references: [id])
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String?   @map("password_hash")
+  name                  String
+  subscriptionType      String    @default("trial") @map("subscription_type")
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  isActive              Boolean   @default(true) @map("is_active")
+  
+  // Email verification
+  emailVerified         Boolean   @default(false) @map("email_verified")
+  verificationToken     String?   @unique @map("verification_token")
+  verificationExpires   DateTime? @map("verification_expires")
+  
+  // Password reset
+  resetToken            String?   @unique @map("reset_token")
+  resetTokenExpires     DateTime? @map("reset_token_expires")
+  
+  // OAuth
+  oauthProvider         String?   @map("oauth_provider")
+  oauthId               String?   @map("oauth_id")
+  
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  memorialPages MemorialPage[]
+  mediaFiles    MediaFile[]
+  collaborators Collaborator[]
+
+  @@unique([oauthProvider, oauthId])
+  @@map("users")
+}
+
+model video_gallery {
+  id               String         @id
+  memorial_page_id String
+  media_file_id    String?
+  title            String?
+  description      String?
+  order_index      Int            @default(0)
+  created_at       DateTime       @default(now())
+  embed_code       String?
+  external_url     String?
+  thumbnail_url    String?
+  video_type       String         @default("upload")
+  media_files      media_files?   @relation(fields: [media_file_id], references: [id], onDelete: Cascade)
+  memorial_pages   memorial_pages @relation(fields: [memorial_page_id], references: [id], onDelete: Cascade)
+
+  @@index([memorial_page_id])
+}
