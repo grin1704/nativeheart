@@ -63,7 +63,7 @@ export const PasswordProtectedPage: React.FC<PasswordProtectedPageProps> = ({
       <PasswordForm
         onSubmit={handlePasswordSubmit}
         loading={loading}
-        error={error}
+        error={error ?? undefined}
       />
     );
   }

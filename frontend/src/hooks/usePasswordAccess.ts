@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { api } from '../utils/api';
+import { apiRequest } from '../utils/api';
 
 interface UsePasswordAccessReturn {
   verifyPassword: (pageId: string, password: string) => Promise<boolean>;
@@ -18,21 +18,16 @@ export const usePasswordAccess = (): UsePasswordAccessReturn => {
   const verifyPassword = useCallback(async (pageId: string, password: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await api.post(`/memorial-pages/${pageId}/verify-password`, {
-        password
-      });
-
-      if (response.data.success && response.data.data.isValid) {
+      const response = await apiRequest('POST', `/memorial-pages/${pageId}/verify-password`, { password });
+      if (response.success && response.data?.isValid) {
         return true;
       } else {
         setError('Неверный пароль');
         return false;
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Произошла ошибка при проверке пароля';
-      setError(errorMessage);
+    } catch (err) {
+      setError('Произошла ошибка при проверке пароля');
       return false;
     } finally {
       setLoading(false);
@@ -41,7 +36,7 @@ export const usePasswordAccess = (): UsePasswordAccessReturn => {
 
   const clearAccess = useCallback(async (pageId: string): Promise<void> => {
     try {
-      await api.delete(`/memorial-pages/${pageId}/password-access`);
+      await apiRequest('DELETE', `/memorial-pages/${pageId}/password-access`);
     } catch (err) {
       console.error('Failed to clear password access:', err);
     }
@@ -49,18 +44,12 @@ export const usePasswordAccess = (): UsePasswordAccessReturn => {
 
   const checkAccess = useCallback(async (pageId: string): Promise<boolean> => {
     try {
-      const response = await api.get(`/memorial-pages/${pageId}/password-access`);
-      return response.data.data.hasAccess;
+      const response = await apiRequest('GET', `/memorial-pages/${pageId}/password-access`);
+      return response.data?.hasAccess ?? false;
     } catch (err) {
       return false;
     }
   }, []);
 
-  return {
-    verifyPassword,
-    clearAccess,
-    checkAccess,
-    loading,
-    error
-  };
+  return { verifyPassword, clearAccess, checkAccess, loading, error };
 };

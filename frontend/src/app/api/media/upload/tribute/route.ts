@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-// Увеличиваем лимит для загрузки больших файлов
-export const config = {
-  api: {
-    bodyParser: false,
-    responseLimit: false,
-  },
-};
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
