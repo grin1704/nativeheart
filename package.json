@@ -1,0 +1,38 @@
+{
+  "name": "memorial-pages-service",
+  "version": "1.0.0",
+  "description": "Сервис памятных страниц - веб-платформа для создания мемориальных страниц",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "./scripts/dev-start.sh",
+    "start": "./scripts/dev-start.sh",
+    "stop": "./scripts/dev-stop.sh",
+    "restart": "./scripts/dev-restart.sh",
+    "status": "./scripts/dev-status.sh",
+    "cleanup": "./scripts/port-cleanup.sh",
+    "dev:manual": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start:frontend": "cd frontend && npm run start",
+    "start:backend": "cd backend && npm run start",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd backend && npm run lint",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:frontend": "cd frontend && npm run format",
+    "format:backend": "cd backend && npm run format"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "axios": "^1.12.2"
+  }
+}

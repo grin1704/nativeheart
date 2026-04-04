@@ -1,0 +1,226 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 222 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 15% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 15% 10%;
+
+    --primary: 158 28% 68%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 16% 94%;
+    --secondary-foreground: 222 15% 20%;
+
+    --muted: 210 16% 94%;
+    --muted-foreground: 222 10% 45%;
+
+    --accent: 210 20% 92%;
+    --accent-foreground: 222 15% 15%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 18% 90%;
+    --input: 210 18% 90%;
+    --ring: 158 28% 50%;
+
+    --radius: 0.75rem;
+
+    --memorial-hero-overlay: 0 0% 100% / 0.78;
+  }
+
+  .dark {
+    --background: 222 15% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 222 15% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 222 15% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 158 45% 55%;
+    --primary-foreground: 222 15% 8%;
+
+    --secondary: 222 15% 18%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 222 15% 18%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 222 18% 20%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 222 15% 22%;
+    --input: 222 15% 22%;
+    --ring: 158 45% 60%;
+  }
+
+  html {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Memorial-specific prose styles */
+  .memorial-prose {
+    @apply text-base leading-relaxed text-foreground;
+  }
+
+  .memorial-prose-muted {
+    @apply text-sm leading-relaxed text-muted-foreground;
+  }
+
+  /* Hide scrollbar utility */
+  .memorial-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .memorial-no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Section animations */
+  .section-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Legacy button styles for backward compatibility */
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent;
+  }
+}
+
+/* Quill Editor Styles - Updated for new design system */
+.ql-toolbar.ql-snow {
+  border: 1px solid hsl(var(--border));
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background-color: hsl(var(--muted));
+}
+
+.ql-container.ql-snow {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0 0 var(--radius) var(--radius);
+  font-family: inherit;
+  background-color: hsl(var(--background));
+}
+
+.ql-editor {
+  min-height: 300px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
+}
+
+.ql-editor.ql-blank::before {
+  font-style: normal;
+  color: hsl(var(--muted-foreground));
+}
+
+.ql-editor h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: hsl(var(--foreground));
+}
+
+.ql-editor h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+.ql-editor h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+  color: hsl(var(--foreground));
+}
+
+.ql-editor blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+.ql-editor ul,
+.ql-editor ol {
+  padding-left: 1.5rem;
+}
+
+.ql-editor li {
+  margin-bottom: 0.5rem;
+}
+
+/* Dark mode support for Quill */
+.dark .ql-toolbar.ql-snow {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-container.ql-snow {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-editor {
+  color: hsl(var(--foreground));
+}
+
+.dark .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+
+.dark .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.dark .ql-picker-label {
+  color: hsl(var(--foreground));
+}

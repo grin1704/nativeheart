@@ -1,0 +1,31 @@
+import { Router } from 'express';
+import { memorialPageController } from '../controllers/memorialPageController';
+import { requireAuth } from '../middleware/auth';
+import { optionalAuth } from '../middleware/optionalAuth';
+import { checkPasswordAccess, verifyAndGrantPasswordAccess, clearPasswordAccess, getPasswordAccessStatus } from '../middleware/passwordSession';
+
+const router = Router();
+
+// Routes that require authentication
+router.post('/', requireAuth, memorialPageController.createMemorialPage);
+router.put('/:id', requireAuth, memorialPageController.updateMemorialPage);
+router.delete('/:id', requireAuth, memorialPageController.deleteMemorialPage);
+router.get('/my', requireAuth, memorialPageController.getUserMemorialPages);
+
+// Biography management routes (require authentication)
+router.put('/:id/biography', requireAuth, memorialPageController.updateBiography);
+router.post('/:id/biography/photos/:photoId', requireAuth, memorialPageController.addBiographyPhoto);
+router.delete('/:id/biography/photos/:photoId', requireAuth, memorialPageController.removeBiographyPhoto);
+router.put('/:id/biography/photos/reorder', requireAuth, memorialPageController.reorderBiographyPhotos);
+
+// Routes with optional authentication and password protection
+router.get('/id/:id', optionalAuth, checkPasswordAccess, memorialPageController.getMemorialPageById);
+router.get('/slug/:slug', optionalAuth, checkPasswordAccess, memorialPageController.getMemorialPageBySlug);
+router.get('/:id/biography', optionalAuth, checkPasswordAccess, memorialPageController.getBiography);
+
+// Password verification and session management for private pages
+router.post('/:id/verify-password', verifyAndGrantPasswordAccess);
+router.delete('/:id/password-access', clearPasswordAccess);
+router.get('/:id/password-access', getPasswordAccessStatus);
+
+export default router;

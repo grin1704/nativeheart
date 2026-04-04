@@ -1,0 +1,138 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { PasswordProtectedPage } from '@/components/PasswordProtectedPage';
+import { MemorialPageView } from '@/components/MemorialPageView';
+import { apiRequest } from '@/utils/api';
+import type { MemorialPage, User } from '@/types';
+
+interface MemorialPageWithDetails extends MemorialPage {
+  owner: {
+    id: string;
+    name: string;
+    email: string;
+    subscriptionType?: 'trial' | 'free' | 'premium';
+  };
+  mainPhoto?: {
+    id: string;
+    url: string;
+    thumbnailUrl?: string;
+  } | null;
+  biography?: {
+    text: string;
+    photos: Array<{
+      id: string;
+      url: string;
+      thumbnailUrl?: string;
+      originalName: string;
+    }>;
+  };
+  _count: {
+    memories: number;
+    tributes: number;
+    mediaFiles: number;
+    photoGallery: number;
+    videoGallery: number;
+  };
+}
+
+export default function PublicMemorialPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+  
+  const [memorialPage, setMemorialPage] = useState<MemorialPageWithDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [needsPassword, setNeedsPassword] = useState(false);
+
+  const fetchMemorialPage = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiRequest<MemorialPageWithDetails>(
+        'GET',
+        `/memorial-pages/slug/${slug}`
+      );
+
+      if (response.success && response.data) {
+        setMemorialPage(response.data);
+        setNeedsPassword(false);
+      } else {
+        // Check if it's a password-protected page
+        if (response.error?.includes('password') || response.error?.includes('пароль')) {
+          setNeedsPassword(true);
+        } else {
+          setError(response.error || 'Памятная страница не найдена');
+        }
+      }
+    } catch (err: any) {
+      console.error('Error fetching memorial page:', err);
+      setError('Произошла ошибка при загрузке страницы');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (slug) {
+      fetchMemorialPage();
+    }
+  }, [slug]);
+
+  const handlePasswordVerified = () => {
+    // Refetch the page data after password verification
+    fetchMemorialPage();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Загрузка памятной страницы...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Страница не найдена</h2>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (needsPassword && memorialPage?.isPrivate) {
+    return (
+      <PasswordProtectedPage
+        pageId={memorialPage.id}
+        onPasswordVerified={handlePasswordVerified}
+      >
+        <MemorialPageView memorialPage={memorialPage} />
+      </PasswordProtectedPage>
+    );
+  }
+
+  if (!memorialPage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Памятная страница не найдена</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <MemorialPageView memorialPage={memorialPage} />;
+}

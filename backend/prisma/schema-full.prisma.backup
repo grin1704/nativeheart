@@ -1,0 +1,287 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String    @map("password_hash")
+  name                  String
+  subscriptionType      String    @default("trial") @map("subscription_type")
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  memorialPages MemorialPage[]
+  mediaFiles    MediaFile[]
+  collaborators Collaborator[]
+
+  @@map("users")
+}
+
+model MemorialPage {
+  id           String    @id @default(uuid())
+  slug         String    @unique
+  ownerId      String    @map("owner_id")
+  fullName     String    @map("full_name")
+  birthDate    DateTime  @map("birth_date") @db.Date
+  deathDate    DateTime  @map("death_date") @db.Date
+  mainPhotoId  String?   @map("main_photo_id")
+  biographyText String?  @map("biography_text") @db.Text
+  isPrivate    Boolean   @default(false) @map("is_private")
+  passwordHash String?   @map("password_hash")
+  qrCodeUrl    String?   @map("qr_code_url")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  owner           User             @relation(fields: [ownerId], references: [id])
+  mainPhoto       MediaFile?       @relation("MainPhoto", fields: [mainPhotoId], references: [id])
+  memories        Memory[]
+  tributes        Tribute[]
+  burialLocation  BurialLocation?
+  collaborators   Collaborator[]
+  mediaFiles      MediaFile[]      @relation("PageMedia")
+  biographyPhotos BiographyPhoto[]
+  photoGallery    PhotoGallery[]
+  videoGallery    VideoGallery[]
+
+  @@map("memorial_pages")
+}
+
+model MediaFile {
+  id           String   @id @default(uuid())
+  originalName String   @map("original_name")
+  url          String
+  thumbnailUrl String?  @map("thumbnail_url")
+  size         Int
+  mimeType     String   @map("mime_type")
+  uploadedBy   String   @map("uploaded_by")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  uploader        User             @relation(fields: [uploadedBy], references: [id])
+  mainPhotoFor    MemorialPage[]   @relation("MainPhoto")
+  memorialPages   MemorialPage[]   @relation("PageMedia")
+  tributes        Tribute[]
+  biographyPhotos BiographyPhoto[]
+  photoGallery    PhotoGallery[]
+  videoGallery    VideoGallery[]
+  memoryPhotos    MemoryPhoto[]
+
+  @@map("media_files")
+}
+
+model Memory {
+  id              String   @id @default(uuid())
+  memorialPageId  String   @map("memorial_page_id")
+  date            DateTime @db.Date
+  title           String
+  description     String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id], onDelete: Cascade)
+  photos       MemoryPhoto[]
+
+  @@index([memorialPageId])
+  @@map("memories")
+}
+
+model Tribute {
+  id             String    @id @default(uuid())
+  memorialPageId String    @map("memorial_page_id")
+  authorName     String    @map("author_name")
+  authorEmail    String?   @map("author_email")
+  text           String    @db.Text
+  photoId        String?   @map("photo_id")
+  isApproved     Boolean   @default(false) @map("is_approved")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id])
+  photo        MediaFile?   @relation(fields: [photoId], references: [id])
+
+  @@map("tributes")
+}
+
+model BurialLocation {
+  id              String  @id @default(uuid())
+  memorialPageId  String  @unique @map("memorial_page_id")
+  address         String  @db.Text
+  description     String? @db.Text
+  latitude        Decimal? @db.Decimal(10, 8)
+  longitude       Decimal? @db.Decimal(11, 8)
+  instructions    String? @db.Text
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id])
+
+  @@map("burial_locations")
+}
+
+model Collaborator {
+  id              String    @id @default(uuid())
+  memorialPageId  String    @map("memorial_page_id")
+  userId          String    @map("user_id")
+  permissions     String    @default("edit")
+  invitedAt       DateTime  @default(now()) @map("invited_at")
+  acceptedAt      DateTime? @map("accepted_at")
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@map("collaborators")
+}
+
+model AdminUser {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  role         String    @default("moderator")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastLogin    DateTime? @map("last_login")
+
+  // Relations
+  permissions AdminPermission[]
+  auditLogs   AdminAuditLog[]
+  moderations ContentModeration[]
+
+  @@map("admin_users")
+}
+
+model AdminPermission {
+  id          String @id @default(uuid())
+  adminUserId String @map("admin_user_id")
+  resource    String
+  actions     String[]
+
+  // Relations
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id])
+
+  @@map("admin_permissions")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  description String?  @db.Text
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  adminUserId  String   @map("admin_user_id")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  details      Json?
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id])
+
+  @@map("admin_audit_logs")
+}
+
+model ContentModeration {
+  id          String    @id @default(uuid())
+  contentType String    @map("content_type")
+  contentId   String    @map("content_id")
+  status      String    @default("pending")
+  moderatorId String?   @map("moderator_id")
+  reason      String?   @db.Text
+  moderatedAt DateTime? @map("moderated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  moderator AdminUser? @relation(fields: [moderatorId], references: [id])
+
+  @@map("content_moderation")
+}
+
+model BiographyPhoto {
+  id              String   @id @default(uuid())
+  memorialPageId  String   @map("memorial_page_id")
+  mediaFileId     String   @map("media_file_id")
+  orderIndex      Int      @default(0) @map("order_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id], onDelete: Cascade)
+  mediaFile    MediaFile    @relation(fields: [mediaFileId], references: [id], onDelete: Cascade)
+
+  @@unique([memorialPageId, mediaFileId])
+  @@index([memorialPageId])
+  @@map("biography_photos")
+}
+
+model PhotoGallery {
+  id              String   @id @default(uuid())
+  memorialPageId  String   @map("memorial_page_id")
+  mediaFileId     String   @map("media_file_id")
+  title           String?
+  description     String?  @db.Text
+  orderIndex      Int      @default(0) @map("order_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id], onDelete: Cascade)
+  mediaFile    MediaFile    @relation(fields: [mediaFileId], references: [id], onDelete: Cascade)
+
+  @@unique([memorialPageId, mediaFileId])
+  @@index([memorialPageId])
+  @@map("photo_gallery")
+}
+
+model VideoGallery {
+  id              String   @id @default(uuid())
+  memorialPageId  String   @map("memorial_page_id")
+  mediaFileId     String   @map("media_file_id")
+  title           String?
+  description     String?  @db.Text
+  orderIndex      Int      @default(0) @map("order_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  memorialPage MemorialPage @relation(fields: [memorialPageId], references: [id], onDelete: Cascade)
+  mediaFile    MediaFile    @relation(fields: [mediaFileId], references: [id], onDelete: Cascade)
+
+  @@unique([memorialPageId, mediaFileId])
+  @@index([memorialPageId])
+  @@map("video_gallery")
+}
+
+model MemoryPhoto {
+  id         String   @id @default(uuid())
+  memoryId   String   @map("memory_id")
+  mediaFileId String  @map("media_file_id")
+  orderIndex Int      @default(0) @map("order_index")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  memory    Memory    @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  mediaFile MediaFile @relation(fields: [mediaFileId], references: [id], onDelete: Cascade)
+
+  @@unique([memoryId, mediaFileId])
+  @@index([memoryId])
+  @@map("memory_photos")
+}
