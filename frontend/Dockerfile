@@ -1,20 +1,3 @@
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
-
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
-
-# Production image
 FROM node:20-alpine
 
 WORKDIR /app
@@ -24,9 +7,9 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm install --omit=dev
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.js ./next.config.js
+COPY .next ./.next
+COPY public ./public
+COPY next.config.js ./next.config.js
 
 EXPOSE 3000
 
