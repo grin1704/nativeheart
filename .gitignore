@@ -5,6 +5,10 @@ node_modules/
 # Production builds
 dist/
 # dist/ intentionally NOT ignored - pre-built for deployment
+# backend/dist is committed
+
+# Next.js build output - committed for deployment
+# .next/
 .next/
 
 # Environment variables
@@ -67,7 +71,7 @@ jspm_packages/
 .parcel-cache
 
 # Next.js build output
-.next
+# .next
 
 # Nuxt.js build / generate output
 .nuxt

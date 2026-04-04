@@ -1,0 +1,23 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const galleryController_1 = require("../controllers/galleryController");
+const auth_1 = require("../middleware/auth");
+const optionalAuth_1 = require("../middleware/optionalAuth");
+const validation_1 = require("../middleware/validation");
+const gallery_1 = require("../validation/gallery");
+const passwordSession_1 = require("../middleware/passwordSession");
+const router = (0, express_1.Router)();
+router.get('/:pageId/photos', optionalAuth_1.optionalAuth, passwordSession_1.checkPasswordAccess, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageId, 'params'), galleryController_1.galleryController.getPhotoGallery.bind(galleryController_1.galleryController));
+router.get('/:pageId/videos', optionalAuth_1.optionalAuth, passwordSession_1.checkPasswordAccess, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageId, 'params'), galleryController_1.galleryController.getVideoGallery.bind(galleryController_1.galleryController));
+router.post('/:pageId/photos', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageId, 'params'), (0, validation_1.validateRequest)(gallery_1.galleryValidation.addToGallery, 'body'), galleryController_1.galleryController.addPhotoToGallery.bind(galleryController_1.galleryController));
+router.put('/:pageId/photos/:itemId', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageAndItemId, 'params'), (0, validation_1.validateRequest)(gallery_1.galleryValidation.updateGalleryItem, 'body'), galleryController_1.galleryController.updatePhotoGalleryItem.bind(galleryController_1.galleryController));
+router.delete('/:pageId/photos/:itemId', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageAndItemId, 'params'), galleryController_1.galleryController.removePhotoFromGallery.bind(galleryController_1.galleryController));
+router.put('/:pageId/photos/reorder', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageId, 'params'), (0, validation_1.validateRequest)(gallery_1.galleryValidation.reorderGallery, 'body'), galleryController_1.galleryController.reorderPhotoGallery.bind(galleryController_1.galleryController));
+router.post('/parse-video', auth_1.requireAuth, galleryController_1.galleryController.parseVideoUrl.bind(galleryController_1.galleryController));
+router.post('/:pageId/videos', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageId, 'params'), (0, validation_1.validateRequest)(gallery_1.galleryValidation.addToGallery, 'body'), galleryController_1.galleryController.addVideoToGallery.bind(galleryController_1.galleryController));
+router.put('/:pageId/videos/:itemId', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageAndItemId, 'params'), (0, validation_1.validateRequest)(gallery_1.galleryValidation.updateGalleryItem, 'body'), galleryController_1.galleryController.updateVideoGalleryItem.bind(galleryController_1.galleryController));
+router.delete('/:pageId/videos/:itemId', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageAndItemId, 'params'), galleryController_1.galleryController.removeVideoFromGallery.bind(galleryController_1.galleryController));
+router.put('/:pageId/videos/reorder', auth_1.requireAuth, (0, validation_1.validateRequest)(gallery_1.galleryValidation.pageId, 'params'), (0, validation_1.validateRequest)(gallery_1.galleryValidation.reorderGallery, 'body'), galleryController_1.galleryController.reorderVideoGallery.bind(galleryController_1.galleryController));
+exports.default = router;
+//# sourceMappingURL=gallery.js.map

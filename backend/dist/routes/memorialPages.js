@@ -1,0 +1,25 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const memorialPageController_1 = require("../controllers/memorialPageController");
+const auth_1 = require("../middleware/auth");
+const optionalAuth_1 = require("../middleware/optionalAuth");
+const passwordSession_1 = require("../middleware/passwordSession");
+const router = (0, express_1.Router)();
+router.post('/', auth_1.requireAuth, memorialPageController_1.memorialPageController.createMemorialPage);
+router.put('/:id', auth_1.requireAuth, memorialPageController_1.memorialPageController.updateMemorialPage);
+router.delete('/:id', auth_1.requireAuth, memorialPageController_1.memorialPageController.deleteMemorialPage);
+router.get('/my', auth_1.requireAuth, memorialPageController_1.memorialPageController.getUserMemorialPages);
+router.put('/:id/biography', auth_1.requireAuth, memorialPageController_1.memorialPageController.updateBiography);
+router.post('/:id/biography/photos/:photoId', auth_1.requireAuth, memorialPageController_1.memorialPageController.addBiographyPhoto);
+router.delete('/:id/biography/photos/:photoId', auth_1.requireAuth, memorialPageController_1.memorialPageController.removeBiographyPhoto);
+router.put('/:id/biography/photos/reorder', auth_1.requireAuth, memorialPageController_1.memorialPageController.reorderBiographyPhotos);
+router.get('/id/:id', optionalAuth_1.optionalAuth, passwordSession_1.checkPasswordAccess, memorialPageController_1.memorialPageController.getMemorialPageById);
+router.get('/slug/:slug', optionalAuth_1.optionalAuth, passwordSession_1.checkPasswordAccess, memorialPageController_1.memorialPageController.getMemorialPageBySlug);
+router.get('/:id/biography', optionalAuth_1.optionalAuth, passwordSession_1.checkPasswordAccess, memorialPageController_1.memorialPageController.getBiography);
+router.post('/:id/verify-password', passwordSession_1.verifyAndGrantPasswordAccess);
+router.delete('/:id/password-access', passwordSession_1.clearPasswordAccess);
+router.get('/:id/password-access', passwordSession_1.getPasswordAccessStatus);
+router.get('/slug/:slug', memorialPageController_1.memorialPageController.getMemorialPageBySlug);
+exports.default = router;
+//# sourceMappingURL=memorialPages.js.map

@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const authController_1 = require("../controllers/authController");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+const authController = new authController_1.AuthController();
+router.post('/register', authController.register.bind(authController));
+router.post('/login', authController.login.bind(authController));
+router.post('/verify-email', authController.verifyEmail.bind(authController));
+router.post('/resend-verification', authController.resendVerification.bind(authController));
+router.post('/request-password-reset', authController.requestPasswordReset.bind(authController));
+router.post('/reset-password', authController.resetPassword.bind(authController));
+router.get('/profile', auth_1.authenticateToken, authController.getProfile.bind(authController));
+router.get('/me', auth_1.authenticateToken, authController.getProfile.bind(authController));
+router.post('/logout', auth_1.authenticateToken, authController.logout.bind(authController));
+router.patch('/subscription', auth_1.authenticateToken, authController.updateSubscription.bind(authController));
+router.post('/change-unverified-email', auth_1.authenticateToken, authController.changeUnverifiedEmail.bind(authController));
+exports.default = router;
+//# sourceMappingURL=auth.js.map
