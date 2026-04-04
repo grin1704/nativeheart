@@ -9,7 +9,8 @@ RUN npm install --omit=dev
 
 COPY dist ./dist
 COPY prisma ./prisma
-RUN npx prisma generate
+
+RUN npx prisma generate && rm -rf /root/.cache/prisma
 
 EXPOSE 3001
 
