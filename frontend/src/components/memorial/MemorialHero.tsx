@@ -145,7 +145,7 @@ export const MemorialHero: React.FC<MemorialHeroProps> = ({
               {/* Quote */}
               {quote && (
                 <p className="memorial-prose-muted mx-auto max-w-2xl text-sm italic md:text-base">
-                  "{quote}"
+                  &ldquo;{quote}&rdquo;
                 </p>
               )}
             </div>

@@ -33,13 +33,14 @@ export interface TributeWithDetails {
   text: string;
   photoId: string | null;
   isApproved: boolean;
+  likesCount: number;
   createdAt: Date;
   photo?: {
     id: string;
     url: string;
-    thumbnailUrl?: string;
+    thumbnailUrl?: string | null;
     originalName: string;
-  };
+  } | null;
 }
 
 class TributeService {
