@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
     
     const response = await fetch(`${backendUrl}/api/memorial-pages`, {
       method: 'POST',
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   try {
     const authorization = request.headers.get('authorization');
     
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
     
     const response = await fetch(`${backendUrl}/api/memorial-pages`, {
       method: 'GET',
