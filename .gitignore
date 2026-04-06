@@ -9,7 +9,7 @@ dist/
 
 # Next.js build output - committed for deployment
 # .next/
-.next/
+# .next/
 
 # Environment variables
 .env
