@@ -66,6 +66,7 @@ class GalleryService {
         const page = await prisma.memorialPage.findUnique({
             where: { id: pageId },
             select: {
+                isPremium: true,
                 owner: {
                     select: {
                         subscriptionType: true,
@@ -77,7 +78,7 @@ class GalleryService {
         if (!page) {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
         }
-        const featureAccess = (0, subscription_1.getFeatureAccess)(page.owner.subscriptionType, page.owner.subscriptionExpiresAt);
+        const featureAccess = (0, subscription_1.getFeatureAccess)(page.owner.subscriptionType, page.owner.subscriptionExpiresAt, page.isPremium);
         return {
             photoGallery: featureAccess.photoGallery,
             videoGallery: featureAccess.videoGallery,

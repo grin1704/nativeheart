@@ -162,6 +162,7 @@ export declare const adminUserService: {
             biographyText: string | null;
             isPrivate: boolean;
             qrCodeUrl: string | null;
+            isPremium: boolean;
         })[];
         pagination: {
             page: number;
@@ -248,6 +249,7 @@ export declare const adminUserService: {
         biographyText: string | null;
         isPrivate: boolean;
         qrCodeUrl: string | null;
+        isPremium: boolean;
     }>;
     deleteMemorialPage(pageId: string, reason: string, adminId: string): Promise<void>;
 };

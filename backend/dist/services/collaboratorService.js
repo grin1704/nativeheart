@@ -62,10 +62,6 @@ class CollaboratorService {
                 },
             },
         });
-        return {
-            ...collaborator,
-            permissions: collaborator.permissions,
-        };
         try {
             await emailService_1.emailService.sendCollaboratorInvitation({
                 invitedUserEmail: invitedUser.email,

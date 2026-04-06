@@ -142,3 +142,61 @@ BACKUP_DIR="backups/backup_$(date +%Y%m%d_%H%M%S)" && mkdir -p "$BACKUP_DIR" && 
 - Миграции БД: `backend/prisma/migrations/`
 - Seed данные: `backend/prisma/seed.ts`
 - Команды БД: `cd backend && npm run db:migrate` / `npm run db:studio`
+
+## Продакшен деплой
+
+Проект задеплоен на сервер и доступен по адресу **https://nativeheart.ru**
+
+### Сервер
+- IP: `85.117.234.124`
+- ОС: Ubuntu, Docker установлен
+- Путь проекта на сервере: `/opt/nativeheart`
+- Репозиторий: https://github.com/grin1704/nativeheart
+
+### Архитектура на сервере
+- Хостовой Nginx (порты 80/443) — reverse proxy
+- Docker контейнеры: `nativeheart_frontend` (3000), `nativeheart_backend` (3001), `nativeheart_db` (postgres)
+- SSL сертификат Let's Encrypt (автообновление через certbot)
+- Рядом работает другой проект: `task.oneset.ru` → `localhost:8080`
+
+### Nginx конфиг продакшена
+`/etc/nginx/sites-available/nativeheart` — проксирует `nativeheart.ru` → `localhost:3000`
+
+### Управление на сервере
+```bash
+cd /opt/nativeheart
+
+# Статус контейнеров
+docker compose -f docker-compose.prod.yml ps
+
+# Логи
+docker compose -f docker-compose.prod.yml logs backend --tail=30
+
+# Перезапуск
+docker compose -f docker-compose.prod.yml restart backend
+```
+
+### Деплой обновлений
+Сборка происходит **локально**, собранные артефакты (`backend/dist/`, `frontend/.next/`) коммитятся в git.
+
+```bash
+# 1. Локально — собрать и запушить
+cd backend && npm run build
+NEXT_PUBLIC_API_URL=https://nativeheart.ru/api NEXT_PUBLIC_YANDEX_MAPS_API_KEY=... npm run build  # в frontend/
+git add -A && git commit -m "..." && git push
+
+# 2. На сервере — обновить и пересобрать Docker образы
+cd /opt/nativeheart && git pull
+docker compose -f docker-compose.prod.yml build --no-cache frontend
+docker compose -f docker-compose.prod.yml up -d frontend
+```
+
+### Переменные окружения на сервере
+Файл `/opt/nativeheart/.env` (не в git). Ключевые отличия от локального:
+- `FRONTEND_URL=https://nativeheart.ru`
+- `NEXT_PUBLIC_API_URL=https://nativeheart.ru/api`
+- `BACKEND_URL=http://backend:3001` (внутри Docker сети)
+- `DATABASE_URL` собирается из `POSTGRES_USER/PASSWORD/DB`
+
+### Важно для API роутов Next.js
+Все server-side роуты в `frontend/src/app/api/` должны использовать `process.env.BACKEND_URL` (не `NEXT_PUBLIC_API_URL` и не `NEXT_PUBLIC_BACKEND_URL`) для обращения к backend внутри Docker сети.

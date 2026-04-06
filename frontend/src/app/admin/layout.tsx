@@ -178,6 +178,20 @@ export default function AdminLayout({
                 {hasPermission(adminUser, 'settings', 'read') && (
                   <li>
                     <a
+                      href="/admin/qr-plates"
+                      className={`block px-4 py-2 text-sm rounded-md ${
+                        pathname.startsWith('/admin/qr-plates')
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      QR-таблички
+                    </a>
+                  </li>
+                )}
+                {hasPermission(adminUser, 'settings', 'read') && (
+                  <li>
+                    <a
                       href="/admin/settings"
                       className={`block px-4 py-2 text-sm rounded-md ${
                         pathname.startsWith('/admin/settings')

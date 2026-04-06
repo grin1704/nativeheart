@@ -11,6 +11,7 @@ interface MemorialPage {
   birthDate: string;
   deathDate: string;
   isPrivate: boolean;
+  isPremium: boolean;
   createdAt: string;
   updatedAt: string;
   owner: {
@@ -94,6 +95,26 @@ export default function AdminMemorialPagesPage() {
       setMessage({ type: 'error', text: 'Ошибка подключения к серверу' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpgradePage = async (pageId: string, pageName: string) => {
+    if (!confirm(`Перевести страницу "${pageName}" в premium и назначить QR-табличку?`)) return;
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/memorial-pages/${pageId}/upgrade`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setMessage({ type: 'success', text: data.message + (data.data.plateToken ? ` Токен: ${data.data.plateToken}` : '') });
+        loadMemorialPages();
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Ошибка обновления' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Ошибка подключения к серверу' });
     }
   };
 
@@ -343,6 +364,23 @@ export default function AdminMemorialPagesPage() {
                           Детали
                         </Link>
                         <span className="text-gray-300">|</span>
+                        {!page.isPremium && (
+                          <>
+                            <button
+                              onClick={() => handleUpgradePage(page.id, page.fullName)}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              → Premium
+                            </button>
+                            <span className="text-gray-300">|</span>
+                          </>
+                        )}
+                        {page.isPremium && (
+                          <>
+                            <span className="text-green-600 font-medium">Premium ✓</span>
+                            <span className="text-gray-300">|</span>
+                          </>
+                        )}
                         <button
                           onClick={() => handleDeletePage(page.id, page.fullName)}
                           className="text-red-600 hover:text-red-900"

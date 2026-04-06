@@ -6,17 +6,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailService = exports.EmailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 class EmailService {
+    get transporter() {
+        if (!this._transporter) {
+            const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+            this._transporter = nodemailer_1.default.createTransport({
+                host: process.env.SMTP_HOST,
+                port: smtpPort,
+                secure: smtpPort === 465,
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS,
+                },
+            });
+        }
+        return this._transporter;
+    }
     constructor() {
-        const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-        this.transporter = nodemailer_1.default.createTransport({
-            host: process.env.SMTP_HOST,
-            port: smtpPort,
-            secure: smtpPort === 465,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        this._transporter = null;
     }
     async sendCollaboratorInvitation(data) {
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
