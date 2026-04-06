@@ -5,6 +5,7 @@ import { adminUserController } from '../controllers/adminUserController';
 import { adminModerationController } from '../controllers/adminModerationController';
 import { adminSettingsController } from '../controllers/adminSettingsController';
 import { adminAuth, requirePermission } from '../middleware/adminAuth';
+import qrCodePlatesRoutes from './qrCodePlates';
 import { validateRequest } from '../middleware/validation';
 import { 
   adminLoginSchema, 
@@ -13,6 +14,8 @@ import {
   updateUserSubscriptionSchema,
   getUsersQuerySchema 
 } from '../validation/admin';
+import prisma from '../config/database';
+import { qrCodePlateService } from '../services/qrCodePlateService';
 
 const router = express.Router();
 
@@ -54,6 +57,51 @@ router.get('/memorial-pages', requirePermission('memorial_pages', 'read'), admin
 router.get('/memorial-pages/:pageId', requirePermission('memorial_pages', 'read'), adminUserController.getMemorialPageDetails);
 router.delete('/memorial-pages/:pageId', requirePermission('memorial_pages', 'delete'), adminUserController.deleteMemorialPage);
 
+// Upgrade memorial page to premium — assign QR plate from pool
+router.post('/memorial-pages/:pageId/upgrade', requirePermission('memorial_pages', 'write'), async (req, res, next) => {
+  try {
+    const { pageId } = req.params;
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    const page = await prisma.memorialPage.findUnique({
+      where: { id: pageId },
+      select: { id: true, isPremium: true, qrCodeUrl: true, slug: true, qrCodePlate: true },
+    });
+
+    if (!page) {
+      return res.status(404).json({ success: false, message: 'Страница не найдена' });
+    }
+
+    if (page.isPremium && page.qrCodePlate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Страница уже является premium и табличка уже назначена',
+        data: { plateToken: page.qrCodePlate.token },
+      });
+    }
+
+    // Assign plate from pool
+    const token = await qrCodePlateService.assignPlateToPage(pageId);
+
+    // Update page: isPremium = true, qrCodeUrl → /qr/:token (or keep slug-based if pool empty)
+    const newQrUrl = token ? `${baseUrl}/qr/${token}` : `${baseUrl}/memorial/${page.slug}`;
+    await prisma.memorialPage.update({
+      where: { id: pageId },
+      data: { isPremium: true, qrCodeUrl: newQrUrl },
+    });
+
+    return res.json({
+      success: true,
+      message: token
+        ? 'Страница переведена в premium, табличка назначена'
+        : 'Страница переведена в premium, но пул табличек пуст — QR-код не изменён',
+      data: { isPremium: true, plateToken: token, qrCodeUrl: newQrUrl },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // System settings routes
 router.get('/settings', requirePermission('settings', 'read'), adminSettingsController.getSystemSettings);
 router.put('/settings', requirePermission('settings', 'write'), adminSettingsController.updateSystemSettings);
@@ -64,5 +112,8 @@ router.get('/settings/export/backup', requirePermission('settings', 'read'), adm
 router.post('/settings/import/backup', requirePermission('settings', 'write'), adminSettingsController.importSettings);
 router.post('/settings/reset/defaults', requirePermission('settings', 'write'), adminSettingsController.resetToDefaults);
 router.get('/test/connections', requirePermission('settings', 'read'), adminSettingsController.testConnections);
+
+// QR-таблички
+router.use('/qr-plates', qrCodePlatesRoutes);
 
 export default router;

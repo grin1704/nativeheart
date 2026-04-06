@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +36,7 @@ export default function LoginPage() {
 
       if (response.ok) {
         login(data.data.user, data.data.token);
-        router.push('/dashboard');
+        router.push(redirectTo);
       } else {
         setError(data.error || 'Ошибка входа');
       }

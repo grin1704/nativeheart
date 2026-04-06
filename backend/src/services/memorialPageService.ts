@@ -1,4 +1,5 @@
 import { generateSlug } from '../utils/slug';
+import { qrCodePlateService } from './qrCodePlateService';
 
 // Helper function to generate unique slug
 async function generateUniqueSlug(fullName: string, excludeSlug?: string): Promise<string> {
@@ -146,7 +147,14 @@ export class MemorialPageService {
       passwordHash = await hashPassword(data.password);
     }
 
-    // Generate QR code URL
+    // Determine if user has premium subscription
+    const userFull = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionType: true, subscriptionExpiresAt: true },
+    });
+    const isPremium = userFull?.subscriptionType !== 'trial';
+
+    // Generate QR code URL (for premium — will point to /qr/:token after plate assignment)
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const qrCodeUrl = `${baseUrl}/memorial/${slug}`;
 
@@ -163,6 +171,7 @@ export class MemorialPageService {
         isPrivate: data.isPrivate || false,
         passwordHash,
         qrCodeUrl,
+        isPremium,
       },
       include: {
         owner: {
@@ -191,6 +200,19 @@ export class MemorialPageService {
         },
       },
     });
+
+    // If premium — assign a plate from the pool and update qrCodeUrl
+    if (isPremium) {
+      const token = await qrCodePlateService.assignPlateToPage(memorialPage.id);
+      if (token) {
+        const plateUrl = `${baseUrl}/qr/${token}`;
+        await prisma.memorialPage.update({
+          where: { id: memorialPage.id },
+          data: { qrCodeUrl: plateUrl },
+        });
+        memorialPage.qrCodeUrl = plateUrl;
+      }
+    }
 
     return memorialPage;
   }
@@ -644,6 +666,7 @@ export class MemorialPageService {
       where: { id: pageId },
       select: {
         biographyText: true,
+        isPremium: true,
         owner: {
           select: {
             subscriptionType: true,
@@ -660,7 +683,8 @@ export class MemorialPageService {
     // Get feature access for the page owner
     const featureAccess = getFeatureAccess(
       memorialPage.owner.subscriptionType as SubscriptionType,
-      memorialPage.owner.subscriptionExpiresAt
+      memorialPage.owner.subscriptionExpiresAt,
+      memorialPage.isPremium
     );
 
     // Get biography photos

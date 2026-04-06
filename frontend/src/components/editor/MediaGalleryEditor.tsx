@@ -394,7 +394,7 @@ export default function MediaGalleryEditor({ memorialPage, user, onUpdate, onErr
       formData.append('type', 'gallery_photo');
       formData.append('memorialPageId', memorialPage.id);
 
-      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/media/upload`, {
+      const uploadResponse = await fetch(`/api/media/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -526,7 +526,7 @@ export default function MediaGalleryEditor({ memorialPage, user, onUpdate, onErr
         reject(new Error('Network error'));
       });
 
-      xhr.open('POST', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/media/upload`);
+      xhr.open('POST', `/api/media/upload`);
       xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`);
       xhr.send(formData);
     });

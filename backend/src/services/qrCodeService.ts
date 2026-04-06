@@ -88,7 +88,6 @@ export class QRCodeService {
    * Generates and saves QR code URL for a memorial page
    */
   async generateAndSaveQRCode(memorialPageId: string): Promise<string> {
-    // Get memorial page
     const memorialPage = await prisma.memorialPage.findUnique({
       where: { id: memorialPageId },
       select: { slug: true, qrCodeUrl: true },
@@ -98,16 +97,17 @@ export class QRCodeService {
       throw new NotFoundError('Памятная страница не найдена');
     }
 
-    // Generate QR code URL
-    const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
-
-    // Update memorial page with QR code URL if not already set
-    if (!memorialPage.qrCodeUrl) {
-      await prisma.memorialPage.update({
-        where: { id: memorialPageId },
-        data: { qrCodeUrl },
-      });
+    // If qrCodeUrl already set (e.g. /qr/:token for premium) — use it as-is
+    if (memorialPage.qrCodeUrl) {
+      return memorialPage.qrCodeUrl;
     }
+
+    // Otherwise generate default slug-based URL and save
+    const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
+    await prisma.memorialPage.update({
+      where: { id: memorialPageId },
+      data: { qrCodeUrl },
+    });
 
     return qrCodeUrl;
   }
@@ -163,20 +163,21 @@ export class QRCodeService {
    * Regenerates QR code URL for a memorial page (useful when slug changes)
    */
   async regenerateQRCode(memorialPageId: string): Promise<string> {
-    // Get memorial page
     const memorialPage = await prisma.memorialPage.findUnique({
       where: { id: memorialPageId },
-      select: { slug: true },
+      select: { slug: true, isPremium: true, qrCodeUrl: true },
     });
 
     if (!memorialPage) {
       throw new NotFoundError('Памятная страница не найдена');
     }
 
-    // Generate new QR code URL
-    const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
+    // Premium pages keep their /qr/:token URL — don't overwrite
+    if (memorialPage.isPremium && memorialPage.qrCodeUrl?.includes('/qr/')) {
+      return memorialPage.qrCodeUrl;
+    }
 
-    // Update memorial page with new QR code URL
+    const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
     await prisma.memorialPage.update({
       where: { id: memorialPageId },
       data: { qrCodeUrl },
@@ -211,17 +212,17 @@ export class QRCodeService {
   ): Promise<Buffer> {
     this.validateOptions(options);
 
-    // Get memorial page
     const memorialPage = await prisma.memorialPage.findUnique({
       where: { id: memorialPageId },
-      select: { slug: true },
+      select: { slug: true, qrCodeUrl: true },
     });
 
     if (!memorialPage) {
       throw new NotFoundError('Памятная страница не найдена');
     }
 
-    const pageUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
+    // Use stored qrCodeUrl (may be /qr/:token for premium pages)
+    const pageUrl = memorialPage.qrCodeUrl || `${this.baseUrl}/memorial/${memorialPage.slug}`;
 
     // Set default options
     const qrOptions = {

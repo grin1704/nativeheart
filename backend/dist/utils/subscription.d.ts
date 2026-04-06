@@ -1,5 +1,5 @@
 import { FeatureAccess, SubscriptionType } from '../types/auth';
-export declare const getFeatureAccess: (subscriptionType: SubscriptionType, subscriptionExpiresAt: Date | null) => FeatureAccess;
+export declare const getFeatureAccess: (subscriptionType: SubscriptionType, subscriptionExpiresAt: Date | null, isPagePremium?: boolean) => FeatureAccess;
 export declare const createTrialSubscription: () => {
     subscriptionType: SubscriptionType;
     expiresAt: Date;

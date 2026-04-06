@@ -158,7 +158,7 @@ export default function MemoriesEditor({ memorialPage, user, onUpdate, onError }
         formData.append('type', 'memory_photo');
         formData.append('memorialPageId', memorialPage.id);
 
-        const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/media/upload`, {
+        const uploadResponse = await fetch(`/api/media/upload`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -241,7 +241,7 @@ export default function MemoriesEditor({ memorialPage, user, onUpdate, onError }
         formData.append('type', 'memory_photo');
         formData.append('memorialPageId', memorialPage.id);
 
-        const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/media/upload`, {
+        const uploadResponse = await fetch(`/api/media/upload`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

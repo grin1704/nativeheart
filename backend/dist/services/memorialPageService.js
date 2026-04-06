@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.memorialPageService = exports.MemorialPageService = void 0;
 const slug_1 = require("../utils/slug");
+const qrCodePlateService_1 = require("./qrCodePlateService");
 async function generateUniqueSlug(fullName, excludeSlug) {
     const baseSlug = (0, slug_1.generateSlug)(fullName);
     let slug = baseSlug;
@@ -87,6 +88,11 @@ class MemorialPageService {
         if (data.password) {
             passwordHash = await (0, password_1.hashPassword)(data.password);
         }
+        const userFull = await database_1.default.user.findUnique({
+            where: { id: userId },
+            select: { subscriptionType: true, subscriptionExpiresAt: true },
+        });
+        const isPremium = userFull?.subscriptionType !== 'trial';
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         const qrCodeUrl = `${baseUrl}/memorial/${slug}`;
         const memorialPage = await database_1.default.memorialPage.create({
@@ -101,6 +107,7 @@ class MemorialPageService {
                 isPrivate: data.isPrivate || false,
                 passwordHash,
                 qrCodeUrl,
+                isPremium,
             },
             include: {
                 owner: {
@@ -129,6 +136,17 @@ class MemorialPageService {
                 },
             },
         });
+        if (isPremium) {
+            const token = await qrCodePlateService_1.qrCodePlateService.assignPlateToPage(memorialPage.id);
+            if (token) {
+                const plateUrl = `${baseUrl}/qr/${token}`;
+                await database_1.default.memorialPage.update({
+                    where: { id: memorialPage.id },
+                    data: { qrCodeUrl: plateUrl },
+                });
+                memorialPage.qrCodeUrl = plateUrl;
+            }
+        }
         return memorialPage;
     }
     async getMemorialPageById(pageId, userId) {
@@ -448,6 +466,7 @@ class MemorialPageService {
             where: { id: pageId },
             select: {
                 biographyText: true,
+                isPremium: true,
                 owner: {
                     select: {
                         subscriptionType: true,
@@ -459,7 +478,7 @@ class MemorialPageService {
         if (!memorialPage) {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
         }
-        const featureAccess = (0, subscription_1.getFeatureAccess)(memorialPage.owner.subscriptionType, memorialPage.owner.subscriptionExpiresAt);
+        const featureAccess = (0, subscription_1.getFeatureAccess)(memorialPage.owner.subscriptionType, memorialPage.owner.subscriptionExpiresAt, memorialPage.isPremium);
         const biographyPhotos = await database_1.default.biographyPhoto.findMany({
             where: { memorialPageId: pageId },
             include: {

@@ -66,7 +66,8 @@ class TributeService {
       // Check subscription access to tributes feature
       const features = getFeatureAccess(
         memorialPage.owner.subscriptionType as SubscriptionType,
-        memorialPage.owner.subscriptionExpiresAt
+        memorialPage.owner.subscriptionExpiresAt,
+        memorialPage.isPremium
       );
 
       if (!features.tributes) {
@@ -154,7 +155,8 @@ class TributeService {
       // Check subscription access to tributes feature
       const features = getFeatureAccess(
         memorialPage.owner.subscriptionType as SubscriptionType,
-        memorialPage.owner.subscriptionExpiresAt
+        memorialPage.owner.subscriptionExpiresAt,
+        memorialPage.isPremium
       );
 
       if (!features.tributes) {
@@ -265,7 +267,8 @@ class TributeService {
       // Check subscription access to tributes feature
       const features = getFeatureAccess(
         tribute.memorialPage.owner.subscriptionType as SubscriptionType,
-        tribute.memorialPage.owner.subscriptionExpiresAt
+        tribute.memorialPage.owner.subscriptionExpiresAt,
+        tribute.memorialPage.isPremium
       );
 
       if (!features.tributes) {
@@ -307,7 +310,8 @@ class TributeService {
       // Check subscription access to tributes feature
       const features = getFeatureAccess(
         existingTribute.memorialPage.owner.subscriptionType as SubscriptionType,
-        existingTribute.memorialPage.owner.subscriptionExpiresAt
+        existingTribute.memorialPage.owner.subscriptionExpiresAt,
+        existingTribute.memorialPage.isPremium
       );
 
       if (!features.tributes) {
@@ -379,7 +383,8 @@ class TributeService {
       // Check subscription access to tributes feature
       const features = getFeatureAccess(
         tribute.memorialPage.owner.subscriptionType as SubscriptionType,
-        tribute.memorialPage.owner.subscriptionExpiresAt
+        tribute.memorialPage.owner.subscriptionExpiresAt,
+        tribute.memorialPage.isPremium
       );
 
       if (!features.tributes) {

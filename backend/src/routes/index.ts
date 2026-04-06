@@ -10,6 +10,8 @@ import qrCodeRoutes from './qrCode';
 import collaboratorRoutes from './collaborator';
 import adminRoutes from './admin';
 import timelineRoutes from './timeline';
+import { redirectByToken } from '../controllers/qrCodePlateController';
+import { qrCodePlateService } from '../services/qrCodePlateService';
 
 const router = Router();
 
@@ -31,6 +33,19 @@ router.use('/gallery', galleryRoutes);
 
 // Mount QR code routes
 router.use('/qr-code', qrCodeRoutes);
+
+// Public QR plate redirect
+router.get('/qr/:token', redirectByToken);
+
+// Public QR plate info (for SSR page)
+router.get('/qr-plates/:token', async (req, res, next) => {
+  try {
+    const plate = await qrCodePlateService.getPlateByToken(req.params.token);
+    res.json({ success: true, data: plate });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Mount root-level routes (these have global middleware)
 router.use('/', memoryRoutes);

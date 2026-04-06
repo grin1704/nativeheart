@@ -1,7 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isSubscriptionActive = exports.createTrialSubscription = exports.getFeatureAccess = void 0;
-const getFeatureAccess = (subscriptionType, subscriptionExpiresAt) => {
+const getFeatureAccess = (subscriptionType, subscriptionExpiresAt, isPagePremium) => {
+    if (isPagePremium) {
+        return {
+            unlimitedBiography: true,
+            photoGallery: true,
+            videoGallery: true,
+            memories: true,
+            tributes: true,
+            collaborators: true,
+        };
+    }
     const isExpired = subscriptionExpiresAt && new Date() > subscriptionExpiresAt;
     const effectiveType = isExpired ? 'free' : subscriptionType;
     switch (effectiveType) {

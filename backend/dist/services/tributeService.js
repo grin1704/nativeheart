@@ -23,7 +23,7 @@ class TributeService {
             if (!memorialPage) {
                 throw new errors_1.NotFoundError('Memorial page');
             }
-            const features = (0, subscription_1.getFeatureAccess)(memorialPage.owner.subscriptionType, memorialPage.owner.subscriptionExpiresAt);
+            const features = (0, subscription_1.getFeatureAccess)(memorialPage.owner.subscriptionType, memorialPage.owner.subscriptionExpiresAt, memorialPage.isPremium);
             if (!features.tributes) {
                 throw new errors_1.ValidationError('Tributes feature is not available for this subscription type');
             }
@@ -83,7 +83,7 @@ class TributeService {
             if (!memorialPage) {
                 throw new errors_1.NotFoundError('Memorial page');
             }
-            const features = (0, subscription_1.getFeatureAccess)(memorialPage.owner.subscriptionType, memorialPage.owner.subscriptionExpiresAt);
+            const features = (0, subscription_1.getFeatureAccess)(memorialPage.owner.subscriptionType, memorialPage.owner.subscriptionExpiresAt, memorialPage.isPremium);
             if (!features.tributes) {
                 throw new errors_1.ValidationError('Tributes feature is not available for this subscription type');
             }
@@ -175,7 +175,7 @@ class TributeService {
             if (!tribute) {
                 throw new errors_1.NotFoundError('Tribute');
             }
-            const features = (0, subscription_1.getFeatureAccess)(tribute.memorialPage.owner.subscriptionType, tribute.memorialPage.owner.subscriptionExpiresAt);
+            const features = (0, subscription_1.getFeatureAccess)(tribute.memorialPage.owner.subscriptionType, tribute.memorialPage.owner.subscriptionExpiresAt, tribute.memorialPage.isPremium);
             if (!features.tributes) {
                 throw new errors_1.ValidationError('Tributes feature is not available for this subscription type');
             }
@@ -208,7 +208,7 @@ class TributeService {
             if (!existingTribute) {
                 throw new errors_1.NotFoundError('Tribute');
             }
-            const features = (0, subscription_1.getFeatureAccess)(existingTribute.memorialPage.owner.subscriptionType, existingTribute.memorialPage.owner.subscriptionExpiresAt);
+            const features = (0, subscription_1.getFeatureAccess)(existingTribute.memorialPage.owner.subscriptionType, existingTribute.memorialPage.owner.subscriptionExpiresAt, existingTribute.memorialPage.isPremium);
             if (!features.tributes) {
                 throw new errors_1.ValidationError('Tributes feature is not available for this subscription type');
             }
@@ -266,7 +266,7 @@ class TributeService {
             if (!tribute) {
                 throw new errors_1.NotFoundError('Tribute');
             }
-            const features = (0, subscription_1.getFeatureAccess)(tribute.memorialPage.owner.subscriptionType, tribute.memorialPage.owner.subscriptionExpiresAt);
+            const features = (0, subscription_1.getFeatureAccess)(tribute.memorialPage.owner.subscriptionType, tribute.memorialPage.owner.subscriptionExpiresAt, tribute.memorialPage.isPremium);
             if (!features.tributes) {
                 throw new errors_1.ValidationError('Tributes feature is not available for this subscription type');
             }

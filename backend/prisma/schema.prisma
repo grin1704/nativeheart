@@ -55,6 +55,7 @@ model MemorialPage {
   isPrivate    Boolean   @default(false) @map("is_private")
   passwordHash String?   @map("password_hash")
   qrCodeUrl    String?   @map("qr_code_url")
+  isPremium    Boolean   @default(false) @map("is_premium")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -70,6 +71,7 @@ model MemorialPage {
   photoGallery    PhotoGallery[]
   videoGallery    VideoGallery[]
   timelineEvents  TimelineEvent[]
+  qrCodePlate     QrCodePlate?
 
   @@map("memorial_pages")
 }
@@ -338,4 +340,29 @@ model TimelineEvent {
 
   @@index([memorialPageId])
   @@map("timeline_events")
+}
+
+model QrCodeBatch {
+  id         String        @id @default(uuid())
+  name       String
+  totalCount Int           @map("total_count")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  plates     QrCodePlate[]
+
+  @@map("qr_code_batches")
+}
+
+model QrCodePlate {
+  id             String       @id @default(uuid())
+  token          String       @unique @default(uuid())
+  status         String       @default("free") // free | assigned
+  batchId        String       @map("batch_id")
+  memorialPageId String?      @unique @map("memorial_page_id")
+  assignedAt     DateTime?    @map("assigned_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  batch        QrCodeBatch   @relation(fields: [batchId], references: [id])
+  memorialPage MemorialPage? @relation(fields: [memorialPageId], references: [id])
+
+  @@map("qr_code_plates")
 }

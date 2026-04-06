@@ -107,11 +107,6 @@ export class CollaboratorService {
       },
     });
 
-    return {
-      ...collaborator,
-      permissions: collaborator.permissions as unknown as CollaboratorPermissions,
-    } as CollaboratorWithUser;
-
     // Send invitation email
     try {
       await emailService.sendCollaboratorInvitation({
@@ -124,7 +119,6 @@ export class CollaboratorService {
       });
     } catch (error) {
       console.error('Failed to send invitation email:', error);
-      // Don't throw error, just log it - the invitation is still created
     }
 
     return {

@@ -293,7 +293,7 @@ class MemoryService {
         if (!page) {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
         }
-        const featureAccess = (0, subscription_1.getFeatureAccess)(page.owner.subscriptionType, page.owner.subscriptionExpiresAt);
+        const featureAccess = (0, subscription_1.getFeatureAccess)(page.owner.subscriptionType, page.owner.subscriptionExpiresAt, page.isPremium);
         if (!featureAccess.memories) {
             throw new errors_1.ForbiddenError('Раздел воспоминаний доступен только в платной версии');
         }

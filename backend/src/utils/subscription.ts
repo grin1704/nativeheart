@@ -1,6 +1,18 @@
 import { FeatureAccess, SubscriptionType } from '../types/auth';
 
-export const getFeatureAccess = (subscriptionType: SubscriptionType, subscriptionExpiresAt: Date | null): FeatureAccess => {
+export const getFeatureAccess = (subscriptionType: SubscriptionType, subscriptionExpiresAt: Date | null, isPagePremium?: boolean): FeatureAccess => {
+  // Premium page always has full access regardless of owner's subscription
+  if (isPagePremium) {
+    return {
+      unlimitedBiography: true,
+      photoGallery: true,
+      videoGallery: true,
+      memories: true,
+      tributes: true,
+      collaborators: true,
+    };
+  }
+
   // Check if subscription is expired
   const isExpired = subscriptionExpiresAt && new Date() > subscriptionExpiresAt;
   

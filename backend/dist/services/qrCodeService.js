@@ -60,13 +60,14 @@ class QRCodeService {
         if (!memorialPage) {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
         }
-        const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
-        if (!memorialPage.qrCodeUrl) {
-            await database_1.default.memorialPage.update({
-                where: { id: memorialPageId },
-                data: { qrCodeUrl },
-            });
+        if (memorialPage.qrCodeUrl) {
+            return memorialPage.qrCodeUrl;
         }
+        const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
+        await database_1.default.memorialPage.update({
+            where: { id: memorialPageId },
+            data: { qrCodeUrl },
+        });
         return qrCodeUrl;
     }
     async getQRCodeData(memorialPageId, options = {}) {
@@ -106,10 +107,13 @@ class QRCodeService {
     async regenerateQRCode(memorialPageId) {
         const memorialPage = await database_1.default.memorialPage.findUnique({
             where: { id: memorialPageId },
-            select: { slug: true },
+            select: { slug: true, isPremium: true, qrCodeUrl: true },
         });
         if (!memorialPage) {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
+        }
+        if (memorialPage.isPremium && memorialPage.qrCodeUrl?.includes('/qr/')) {
+            return memorialPage.qrCodeUrl;
         }
         const qrCodeUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
         await database_1.default.memorialPage.update({
@@ -133,12 +137,12 @@ class QRCodeService {
         this.validateOptions(options);
         const memorialPage = await database_1.default.memorialPage.findUnique({
             where: { id: memorialPageId },
-            select: { slug: true },
+            select: { slug: true, qrCodeUrl: true },
         });
         if (!memorialPage) {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
         }
-        const pageUrl = `${this.baseUrl}/memorial/${memorialPage.slug}`;
+        const pageUrl = memorialPage.qrCodeUrl || `${this.baseUrl}/memorial/${memorialPage.slug}`;
         const qrOptions = {
             width: options.size || 300,
             margin: options.margin || 2,

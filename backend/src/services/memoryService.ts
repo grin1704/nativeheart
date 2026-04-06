@@ -482,7 +482,8 @@ export class MemoryService {
 
     const featureAccess = getFeatureAccess(
       page.owner.subscriptionType as SubscriptionType,
-      page.owner.subscriptionExpiresAt
+      page.owner.subscriptionExpiresAt,
+      page.isPremium
     );
 
     if (!featureAccess.memories) {

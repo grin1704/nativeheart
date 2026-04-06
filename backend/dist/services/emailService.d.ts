@@ -38,7 +38,8 @@ export interface PasswordResetData {
     resetToken: string;
 }
 export declare class EmailService {
-    private transporter;
+    private _transporter;
+    private get transporter();
     constructor();
     sendCollaboratorInvitation(data: CollaboratorInvitationEmailData): Promise<void>;
     sendCollaboratorAcceptedNotification(data: CollaboratorAcceptedEmailData): Promise<void>;

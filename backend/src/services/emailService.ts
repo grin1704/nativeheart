@@ -46,20 +46,25 @@ export interface PasswordResetData {
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private _transporter: nodemailer.Transporter | null = null;
 
-  constructor() {
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: smtpPort,
-      secure: smtpPort === 465, // true for 465 (SSL), false for 587 (TLS)
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+  private get transporter(): nodemailer.Transporter {
+    if (!this._transporter) {
+      const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+      this._transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+    }
+    return this._transporter;
   }
+
+  constructor() {}
 
   /**
    * Sends a collaborator invitation email

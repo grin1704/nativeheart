@@ -94,6 +94,7 @@ export class GalleryService {
     const page = await prisma.memorialPage.findUnique({
       where: { id: pageId },
       select: {
+        isPremium: true,
         owner: {
           select: {
             subscriptionType: true,
@@ -109,7 +110,8 @@ export class GalleryService {
 
     const featureAccess = getFeatureAccess(
       page.owner.subscriptionType as SubscriptionType,
-      page.owner.subscriptionExpiresAt
+      page.owner.subscriptionExpiresAt,
+      page.isPremium
     );
 
     return {
