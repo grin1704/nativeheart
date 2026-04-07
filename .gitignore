@@ -6,9 +6,9 @@ node_modules/
 # dist/ intentionally NOT ignored - pre-built for deployment
 # backend/dist is committed
 
-# Next.js build output - committed for deployment
-# .next/
-# .next/
+# Next.js build output - NOT committed, build on server
+frontend/.next/
+.next/
 
 # Environment variables
 .env
