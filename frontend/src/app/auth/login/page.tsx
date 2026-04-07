@@ -148,8 +148,14 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={async () => {
-                    const response = await fetch('/api/auth/vk/url');
+                    const response = await fetch('/api/auth/vk/url', {
+                      cache: 'no-store',
+                      headers: {
+                        'Cache-Control': 'no-cache'
+                      }
+                    });
                     const data = await response.json();
+                    console.log('VK Auth URL:', data.authUrl);
                     window.location.href = data.authUrl;
                   }}
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"

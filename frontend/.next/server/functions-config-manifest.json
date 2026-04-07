@@ -1,1 +1,1 @@
-{"version":1,"functions":{"/api/media/upload/tribute":{"maxDuration":60},"/api/media/upload":{"maxDuration":60}}}
+{"version":1,"functions":{"/api/auth/vk/url":{},"/api/auth/yandex/url":{},"/api/media/upload/tribute":{"maxDuration":60},"/api/media/upload":{"maxDuration":60}}}
