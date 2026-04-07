@@ -3,7 +3,6 @@ node_modules/
 */node_modules/
 
 # Production builds
-dist/
 # dist/ intentionally NOT ignored - pre-built for deployment
 # backend/dist is committed
 
