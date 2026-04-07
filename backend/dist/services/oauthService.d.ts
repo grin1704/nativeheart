@@ -1,14 +1,52 @@
-export interface OAuthUserInfo {
-    id: string;
+interface OAuthUserData {
+    provider: 'vk' | 'yandex';
+    providerId: string;
     email: string;
     name: string;
 }
 export declare class OAuthService {
-    getVKAuthUrl(redirectUri: string): string;
-    getVKUserInfo(code: string, redirectUri: string): Promise<OAuthUserInfo>;
-    getYandexAuthUrl(redirectUri: string): string;
-    getYandexUserInfo(code: string, redirectUri: string): Promise<OAuthUserInfo>;
-    private generateState;
+    findOrCreateUser(data: OAuthUserData): Promise<{
+        user: {
+            id: string;
+            email: string;
+            name: string;
+            subscriptionType: string;
+            subscriptionExpiresAt: Date;
+            emailVerified: boolean;
+            oauthProvider: string;
+            oauthId: string;
+        };
+        token: string;
+    }>;
+    getVkAuthUrl(): string;
+    handleVkCallback(code: string): Promise<{
+        user: {
+            id: string;
+            email: string;
+            name: string;
+            subscriptionType: string;
+            subscriptionExpiresAt: Date;
+            emailVerified: boolean;
+            oauthProvider: string;
+            oauthId: string;
+        };
+        token: string;
+    }>;
+    getYandexAuthUrl(): string;
+    handleYandexCallback(code: string): Promise<{
+        user: {
+            id: string;
+            email: string;
+            name: string;
+            subscriptionType: string;
+            subscriptionExpiresAt: Date;
+            emailVerified: boolean;
+            oauthProvider: string;
+            oauthId: string;
+        };
+        token: string;
+    }>;
 }
 export declare const oauthService: OAuthService;
+export {};
 //# sourceMappingURL=oauthService.d.ts.map

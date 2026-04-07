@@ -148,7 +148,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={async () => {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/auth/vk/url`);
+                    const response = await fetch('/api/auth/vk/url');
                     const data = await response.json();
                     window.location.href = data.authUrl;
                   }}
@@ -160,7 +160,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={async () => {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/auth/yandex/url`);
+                    const response = await fetch('/api/auth/yandex/url');
                     const data = await response.json();
                     window.location.href = data.authUrl;
                   }}

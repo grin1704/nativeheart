@@ -34,10 +34,11 @@
 - PostgreSQL + Prisma ORM
 - JWT аутентификация
 - bcryptjs — хеширование паролей
-- Nodemailer — отправка email
+- Nodemailer — отправка email (mail.ru SMTP, требует пароль приложения)
 - Multer — загрузка файлов
 - Sharp — обработка изображений (миниатюры)
 - QRCode — генерация QR-кодов
+- archiver — создание ZIP-архивов (экспорт QR-табличек)
 
 ## Запуск проекта
 
@@ -55,6 +56,12 @@
 ./scripts/dev-restart.sh
 ```
 
+**Важно:** после изменений в backend всегда нужно пересобирать:
+```bash
+cd backend && npm run build
+# затем перезапустить процесс node dist/index.js
+```
+
 Frontend: http://localhost:3000  
 Backend API: http://localhost:3001  
 Admin панель: http://localhost:3000/admin/login
@@ -66,7 +73,7 @@ Admin панель: http://localhost:3000/admin/login
 - `JWT_SECRET` — секрет для JWT токенов
 - `YANDEX_CLOUD_*` — Yandex Cloud Object Storage (хранение медиафайлов)
 - `YANDEX_MAPS_API_KEY` — Яндекс Карты
-- `SMTP_*` — Email (настроен mail.ru)
+- `SMTP_HOST=smtp.mail.ru`, `SMTP_PORT=465`, `SMTP_USER`, `SMTP_PASS` — Email (mail.ru, пароль приложения, не обычный пароль)
 - `VK_CLIENT_ID/SECRET` — OAuth ВКонтакте
 - `YANDEX_CLIENT_ID/SECRET` — OAuth Яндекс
 
@@ -79,7 +86,7 @@ Admin панель: http://localhost:3000/admin/login
 
 Основные модели:
 - `User` — пользователи (email/password + OAuth VK/Яндекс)
-- `MemorialPage` — мемориальные страницы (slug, владелец, фото, биография)
+- `MemorialPage` — мемориальные страницы (slug, владелец, фото, биография, `isPremium`)
 - `MediaFile` — медиафайлы (фото/видео)
 - `Memory` — воспоминания с фотографиями
 - `Tribute` — отзывы/соболезнования с лайками
@@ -92,6 +99,8 @@ Admin панель: http://localhost:3000/admin/login
 - `AdminUser` — администраторы
 - `SystemSetting` — системные настройки
 - `ContentModeration` — модерация контента
+- `QrCodeBatch` — партии QR-табличек (название, количество)
+- `QrCodePlate` — физические QR-таблички (token UUID, status: free/assigned, привязка к странице)
 
 ## Архитектура API
 
@@ -100,6 +109,8 @@ Frontend использует Next.js API Routes как прокси к backend:
 - `backend/src/routes/` — реальные Express роуты
 - `backend/src/controllers/` — контроллеры
 - `backend/src/services/` — бизнес-логика
+
+**Важно для клиентских компонентов:** при вызове Next.js API роутов из браузера использовать относительные URL (`/api/media/upload`), а НЕ `${NEXT_PUBLIC_API_URL}/api/...` — иначе на продакшене получится двойной `/api/api/`.
 
 ## Реализованные фичи
 
@@ -116,11 +127,65 @@ Frontend использует Next.js API Routes как прокси к backend:
 - Место захоронения с картой (Яндекс Карты, выбор точки)
 - QR-коды для страниц
 - Приватные страницы с паролем
-- Соавторы с гранулярными правами доступа
+- Соавторы с гранулярными правами доступа (email-приглашение, страницы accept/decline)
 - Удаление страниц
 - Миниатюры для видео
 - PWA (установка как приложение)
 - Админ панель (пользователи, страницы, модерация, настройки)
+- **QR-таблички** — пул физических QR-кодов для гравировки на табличках
+
+## Система подписок и платного функционала
+
+### Логика доступа
+Доступ к функционалу страницы определяется по принципу "ИЛИ":
+1. `user.subscriptionType` = `trial` или `premium` (и подписка не истекла)
+2. `page.isPremium` = `true`
+
+### Типы подписок пользователя (`subscriptionType`)
+- `trial` — пробный период (14 дней), полный функционал для всех страниц
+- `free` — пробный период истёк, усечённый функционал
+- `premium` — платная подписка, полный функционал
+
+### Поле `isPremium` на странице
+- `false` — страница в базовом режиме (зависит от подписки владельца)
+- `true` — страница оплачена, полный функционал независимо от подписки владельца
+
+### Полный функционал включает
+- Неограниченная биография
+- Фото галерея
+- Видео галерея
+- Воспоминания
+- Отзывы/соболезнования
+- Соавторы
+
+### Перевод страницы в premium
+Сейчас — вручную через кнопку "→ Premium" в админке (`/admin/memorial-pages`).
+В будущем — автоматически после оплаты per-page.
+
+## Система QR-табличек
+
+### Концепция
+Физические таблички с гравированным QR-кодом изготавливаются заранее партиями. QR-код содержит URL вида `https://nativeheart.ru/qr/<uuid>`. При сканировании происходит редирект на мемориальную страницу.
+
+### Логика назначения
+- Таблички назначаются только страницам с `isPremium = true`
+- При переводе страницы в premium автоматически берётся первая свободная табличка из пула
+- `page.qrCodeUrl` обновляется на `https://nativeheart.ru/qr/<token>`
+- Один QR-код — одна страница навсегда (не переназначается)
+- Если пул пуст — страница становится premium без таблички
+
+### Страницы и роуты
+- `/qr/[token]` — SSR редирект на мемориальную страницу (или заглушка если не назначена)
+- `/admin/qr-plates` — управление пулом: партии, статистика, экспорт SVG
+- `POST /api/admin/memorial-pages/:pageId/upgrade` — перевод страницы в premium
+
+### Экспорт
+- Экспорт партии: ZIP-архив с отдельными `.svg` файлами (`qr-<uuid>.svg`)
+- Имя файла в архиве соответствует токену таблички
+
+### Цифровой QR vs физическая табличка
+- `isPremium = false` → обычный цифровой QR (`/memorial/<slug>`), таблички не расходуются
+- `isPremium = true` → QR ведёт через `/qr/<token>` → редирект на страницу
 
 ## Хранение медиафайлов
 
@@ -142,6 +207,8 @@ BACKUP_DIR="backups/backup_$(date +%Y%m%d_%H%M%S)" && mkdir -p "$BACKUP_DIR" && 
 - Миграции БД: `backend/prisma/migrations/`
 - Seed данные: `backend/prisma/seed.ts`
 - Команды БД: `cd backend && npm run db:migrate` / `npm run db:studio`
+- Prisma клиент генерируется в корневой `node_modules` (не в `backend/node_modules`)
+- После ручного применения SQL миграций нужно запускать `npx prisma generate` из корня
 
 ## Продакшен деплой
 
@@ -152,6 +219,7 @@ BACKUP_DIR="backups/backup_$(date +%Y%m%d_%H%M%S)" && mkdir -p "$BACKUP_DIR" && 
 - ОС: Ubuntu, Docker установлен
 - Путь проекта на сервере: `/opt/nativeheart`
 - Репозиторий: https://github.com/grin1704/nativeheart
+- Диск: 9.6GB, ~3GB свободно (следить за заполнением — `.next/` в git растёт)
 
 ### Архитектура на сервере
 - Хостовой Nginx (порты 80/443) — reverse proxy
@@ -182,7 +250,9 @@ docker compose -f docker-compose.prod.yml restart backend
 ```bash
 # 1. Локально — собрать и запушить
 cd backend && npm run build
-NEXT_PUBLIC_API_URL=https://nativeheart.ru/api NEXT_PUBLIC_YANDEX_MAPS_API_KEY=... npm run build  # в frontend/
+cd ../frontend
+NEXT_PUBLIC_API_URL=https://nativeheart.ru/api NEXT_PUBLIC_YANDEX_MAPS_API_KEY=<key> npm run build
+cd ..
 git add -A && git commit -m "..." && git push
 
 # 2. На сервере — обновить и пересобрать Docker образы
