@@ -5,12 +5,16 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 COPY package*.json ./
-RUN npm install --omit=dev && npm cache clean --force
+RUN npm install && npm cache clean --force
 
-COPY dist ./dist
-COPY prisma ./prisma
+COPY . .
+
+RUN npm run build
 
 RUN npx prisma generate && rm -rf /root/.cache/prisma
+
+# Remove dev dependencies after build
+RUN npm prune --omit=dev
 
 EXPOSE 3001
 
