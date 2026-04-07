@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import tributeService from '@/../../backend/src/services/tributeService';
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 export async function POST(
   request: NextRequest,
@@ -7,30 +8,23 @@ export async function POST(
 ) {
   try {
     const tributeId = params.id;
-    
-    // Get user ID from session if authenticated
-    // For now, we'll use fingerprint from request body
     const body = await request.json();
-    const { fingerprint } = body;
 
-    if (!fingerprint) {
-      return NextResponse.json(
-        { success: false, error: 'Fingerprint is required' },
-        { status: 400 }
-      );
-    }
-
-    const result = await tributeService.likeTribute(tributeId, undefined, fingerprint);
-
-    return NextResponse.json({
-      success: true,
-      data: result
+    const response = await fetch(`${BACKEND_URL}/api/tributes/${tributeId}/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
     console.error('Error liking tribute:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to like tribute' },
-      { status: error.statusCode || 500 }
+      { status: 500 }
     );
   }
 }
@@ -41,29 +35,23 @@ export async function DELETE(
 ) {
   try {
     const tributeId = params.id;
-    
-    // Get fingerprint from query params
     const { searchParams } = new URL(request.url);
     const fingerprint = searchParams.get('fingerprint');
 
-    if (!fingerprint) {
-      return NextResponse.json(
-        { success: false, error: 'Fingerprint is required' },
-        { status: 400 }
-      );
-    }
+    const response = await fetch(
+      `${BACKEND_URL}/api/tributes/${tributeId}/like?fingerprint=${fingerprint}`,
+      {
+        method: 'DELETE',
+      }
+    );
 
-    const result = await tributeService.unlikeTribute(tributeId, undefined, fingerprint);
-
-    return NextResponse.json({
-      success: true,
-      data: result
-    });
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
     console.error('Error unliking tribute:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to unlike tribute' },
-      { status: error.statusCode || 500 }
+      { status: 500 }
     );
   }
 }
