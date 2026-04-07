@@ -32,12 +32,17 @@ export default function VKCallbackPage() {
 
   const handleVKCallback = async (code: string) => {
     try {
+      const searchParamsObj = Object.fromEntries(searchParams.entries());
       const response = await fetch('/api/auth/vk/callback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({
+          code,
+          device_id: searchParamsObj.device_id || '',
+          state: searchParamsObj.state || '',
+        }),
       });
 
       const data = await response.json();

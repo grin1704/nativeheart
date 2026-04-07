@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import prisma from '../config/database';
 import { generateToken } from '../utils/jwt';
 import { createTrialSubscription } from '../utils/subscription';
@@ -7,6 +8,21 @@ interface OAuthUserData {
   providerId: string;
   email: string;
   name: string;
+}
+
+// In-memory store для code_verifier (в продакшене лучше Redis, но для начала достаточно)
+const pkceStore = new Map<string, { verifier: string; createdAt: number }>();
+
+function generateCodeVerifier(): string {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+function generateCodeChallenge(verifier: string): string {
+  return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+
+function generateState(): string {
+  return crypto.randomBytes(16).toString('hex');
 }
 
 export class OAuthService {
@@ -69,60 +85,91 @@ export class OAuthService {
   }
 
   /**
-   * VK: получить URL для авторизации
+   * VK: получить URL для авторизации (OAuth 2.1 с PKCE)
    */
-  getVkAuthUrl(): string {
+  getVkAuthUrl(): { authUrl: string; state: string } {
     const clientId = process.env.VK_CLIENT_ID;
-    const redirectUri = process.env.VK_REDIRECT_URI || `${process.env.FRONTEND_URL}/auth/vk/callback`;
-    const scope = 'email';
+    const redirectUri = process.env.VK_REDIRECT_URI || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/vk/callback`;
+
+    const verifier = generateCodeVerifier();
+    const challenge = generateCodeChallenge(verifier);
+    const state = generateState();
+
+    // Сохраняем verifier по state
+    pkceStore.set(state, { verifier, createdAt: Date.now() });
+    // Чистим старые записи (старше 10 минут)
+    for (const [k, v] of pkceStore.entries()) {
+      if (Date.now() - v.createdAt > 600000) pkceStore.delete(k);
+    }
+
     const params = new URLSearchParams({
       client_id: clientId!,
       redirect_uri: redirectUri,
-      scope,
+      scope: 'email',
       response_type: 'code',
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
       v: '5.131',
     });
-    return `https://oauth.vk.com/authorize?${params}`;
+    return { authUrl: `https://id.vk.com/authorize?${params}`, state };
   }
 
   /**
-   * VK: обменять code на токен и получить данные пользователя
+   * VK: обменять code на токен (OAuth 2.1 с PKCE)
    */
-  async handleVkCallback(code: string) {
+  async handleVkCallback(code: string, deviceId: string, state: string) {
     const clientId = process.env.VK_CLIENT_ID!;
-    const clientSecret = process.env.VK_CLIENT_SECRET!;
-    const redirectUri = process.env.VK_REDIRECT_URI || `${process.env.FRONTEND_URL}/auth/vk/callback`;
+    const redirectUri = process.env.VK_REDIRECT_URI || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/vk/callback`;
 
-    // Получаем access_token
-    const tokenRes = await fetch(
-      `https://oauth.vk.com/access_token?client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${code}`
-    );
+    // Получаем verifier по state
+    const pkceData = pkceStore.get(state);
+    if (!pkceData) {
+      throw new Error('Недействительный state. Попробуйте войти снова.');
+    }
+    pkceStore.delete(state);
+
+    // Обмениваем code на токен
+    const tokenRes = await fetch('https://id.vk.com/oauth2/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        code,
+        device_id: deviceId,
+        redirect_uri: redirectUri,
+        code_verifier: pkceData.verifier,
+      }),
+    });
     const tokenData = await tokenRes.json() as any;
 
     if (tokenData.error) {
       throw new Error(`VK OAuth error: ${tokenData.error_description || tokenData.error}`);
     }
 
-    const { access_token, user_id, email } = tokenData;
+    const { access_token, id_token } = tokenData;
 
-    // Получаем данные пользователя
-    const userRes = await fetch(
-      `https://api.vk.com/method/users.get?user_ids=${user_id}&fields=first_name,last_name&access_token=${access_token}&v=5.131`
-    );
-    const userData = await userRes.json() as any;
-    const vkUser = userData.response?.[0];
+    // Получаем данные пользователя через userinfo
+    const userRes = await fetch('https://id.vk.com/oauth2/user_info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: clientId, access_token }),
+    });
+    const userInfo = await userRes.json() as any;
+    const vkUser = userInfo.user;
 
-    if (!vkUser) {
+    if (!vkUser?.user_id) {
       throw new Error('Не удалось получить данные пользователя VK');
     }
 
-    const name = `${vkUser.first_name} ${vkUser.last_name}`.trim();
-    const userEmail = email || `vk_${user_id}@vk.nativeheart.ru`;
+    const name = `${vkUser.first_name || ''} ${vkUser.last_name || ''}`.trim() || vkUser.email || `vk_${vkUser.user_id}`;
+    const email = vkUser.email || `vk_${vkUser.user_id}@vk.nativeheart.ru`;
 
     return this.findOrCreateUser({
       provider: 'vk',
-      providerId: String(user_id),
-      email: userEmail,
+      providerId: String(vkUser.user_id),
+      email,
       name,
     });
   }

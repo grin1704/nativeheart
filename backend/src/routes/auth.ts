@@ -16,13 +16,14 @@ router.post('/reset-password', authController.resetPassword.bind(authController)
 
 // VK OAuth
 router.get('/vk/url', (_req, res) => {
-  res.json({ authUrl: oauthService.getVkAuthUrl() });
+  const { authUrl, state } = oauthService.getVkAuthUrl();
+  res.json({ authUrl, state });
 });
 router.post('/vk/callback', async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, device_id, state } = req.body;
     if (!code) return res.status(400).json({ error: 'Код авторизации обязателен' });
-    const result = await oauthService.handleVkCallback(code);
+    const result = await oauthService.handleVkCallback(code, device_id || '', state || '');
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('VK callback error:', error);
