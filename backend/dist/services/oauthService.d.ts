@@ -18,8 +18,11 @@ export declare class OAuthService {
         };
         token: string;
     }>;
-    getVkAuthUrl(): string;
-    handleVkCallback(code: string): Promise<{
+    getVkAuthUrl(): {
+        authUrl: string;
+        state: string;
+    };
+    handleVkCallback(code: string, deviceId: string, state: string): Promise<{
         user: {
             id: string;
             email: string;
