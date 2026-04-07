@@ -128,8 +128,8 @@ export declare const adminUserService: {
         }[];
         recentUploads: {
             id: string;
-            originalName: string;
             size: number;
+            originalName: string;
             mimeType: string;
             uploadedAt: Date;
         }[];
@@ -183,8 +183,8 @@ export declare const adminUserService: {
         };
         photoGallery: {
             mediaFile: {
-                originalName: string;
                 size: number;
+                originalName: string;
                 uploadedAt: Date;
             };
             id: string;
@@ -193,8 +193,8 @@ export declare const adminUserService: {
         }[];
         videoGallery: {
             mediaFile: {
-                originalName: string;
                 size: number;
+                originalName: string;
                 uploadedAt: Date;
             };
             id: string;
