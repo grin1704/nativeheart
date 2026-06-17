@@ -4,6 +4,9 @@ exports.timelineController = exports.TimelineController = void 0;
 const timelineService_1 = require("../services/timelineService");
 const timeline_1 = require("../validation/timeline");
 const errors_1 = require("../utils/errors");
+const checkSectionAccess_1 = require("../utils/checkSectionAccess");
+const collaboratorService_1 = require("../services/collaboratorService");
+const logger_1 = require("../utils/logger");
 class TimelineController {
     async getTimelineEvents(req, res, next) {
         try {
@@ -26,7 +29,9 @@ class TimelineController {
                 throw new errors_1.ValidationError(error.details[0].message);
             }
             await timelineService_1.timelineService.checkEditAccess(memorialPageId, req.user.id);
+            await (0, checkSectionAccess_1.checkSectionAccess)(memorialPageId, req.user.id, 'timeline');
             const event = await timelineService_1.timelineService.createTimelineEvent(memorialPageId, value);
+            collaboratorService_1.collaboratorService.notifyPageChange(memorialPageId, req.user.id, 'Хронология', 'Добавлено событие в хронологию').catch(err => logger_1.logger.warn('Failed to send timeline notification', err));
             res.status(201).json({
                 success: true,
                 data: event,
@@ -49,7 +54,9 @@ class TimelineController {
                 throw new errors_1.ValidationError('Событие не найдено');
             }
             await timelineService_1.timelineService.checkEditAccess(existingEvent.memorialPageId, req.user.id);
+            await (0, checkSectionAccess_1.checkSectionAccess)(existingEvent.memorialPageId, req.user.id, 'timeline');
             const event = await timelineService_1.timelineService.updateTimelineEvent(eventId, value);
+            collaboratorService_1.collaboratorService.notifyPageChange(existingEvent.memorialPageId, req.user.id, 'Хронология', 'Изменено событие в хронологии').catch(err => logger_1.logger.warn('Failed to send timeline notification', err));
             res.json({
                 success: true,
                 data: event,
@@ -68,6 +75,7 @@ class TimelineController {
                 throw new errors_1.ValidationError('Событие не найдено');
             }
             await timelineService_1.timelineService.checkEditAccess(existingEvent.memorialPageId, req.user.id);
+            await (0, checkSectionAccess_1.checkSectionAccess)(existingEvent.memorialPageId, req.user.id, 'timeline');
             await timelineService_1.timelineService.deleteTimelineEvent(eventId);
             res.json({
                 success: true,
@@ -86,6 +94,7 @@ class TimelineController {
                 throw new errors_1.ValidationError(error.details[0].message);
             }
             await timelineService_1.timelineService.checkEditAccess(memorialPageId, req.user.id);
+            await (0, checkSectionAccess_1.checkSectionAccess)(memorialPageId, req.user.id, 'timeline');
             const events = await timelineService_1.timelineService.reorderTimelineEvents(memorialPageId, value.eventIds);
             res.json({
                 success: true,

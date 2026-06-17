@@ -38,7 +38,7 @@ export declare class CollaboratorService {
     checkEditAccess(pageId: string, userId: string): Promise<boolean>;
     checkSectionPermission(pageId: string, userId: string, section: keyof CollaboratorPermissions): Promise<boolean>;
     getInvitationDetails(collaboratorId: string, userId: string): Promise<CollaboratorInvitation>;
-    notifyPageChange(pageId: string, changeMadeBy: string, changeType: string, changeDescription: string): Promise<void>;
+    notifyPageChange(pageId: string, changeMadeBy: string, changeType: string, changeDescription: string, changerNameOverride?: string): Promise<void>;
 }
 export declare const collaboratorService: CollaboratorService;
 //# sourceMappingURL=collaboratorService.d.ts.map

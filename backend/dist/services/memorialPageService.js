@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -39,6 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.memorialPageService = exports.MemorialPageService = void 0;
 const slug_1 = require("../utils/slug");
 const qrCodePlateService_1 = require("./qrCodePlateService");
+const checkSectionAccess_1 = require("../utils/checkSectionAccess");
+const collaboratorService_1 = require("./collaboratorService");
+const logger_1 = require("../utils/logger");
 async function generateUniqueSlug(fullName, excludeSlug) {
     const baseSlug = (0, slug_1.generateSlug)(fullName);
     let slug = baseSlug;
@@ -239,6 +209,7 @@ class MemorialPageService {
             throw new errors_1.NotFoundError('Памятная страница не найдена');
         }
         await this.checkEditAccess(pageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(pageId, userId, 'basicInfo');
         if (data.mainPhotoId) {
             const mainPhoto = await database_1.default.mediaFile.findFirst({
                 where: {
@@ -299,11 +270,10 @@ class MemorialPageService {
             },
         });
         try {
-            const { collaboratorService } = await Promise.resolve().then(() => __importStar(require('./collaboratorService')));
-            await collaboratorService.notifyPageChange(pageId, userId, 'Основная информация', 'Обновлена основная информация о памятной странице');
+            await collaboratorService_1.collaboratorService.notifyPageChange(pageId, userId, 'Основная информация', 'Обновлена основная информация о памятной странице');
         }
         catch (error) {
-            console.error('Failed to send change notification:', error);
+            logger_1.logger.error('Failed to send change notification', error);
         }
         return updatedPage;
     }
@@ -406,6 +376,7 @@ class MemorialPageService {
     }
     async updateBiography(pageId, userId, data) {
         await this.checkEditAccess(pageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(pageId, userId, 'biography');
         const user = await database_1.default.user.findUnique({
             where: { id: userId },
             select: { subscriptionType: true, subscriptionExpiresAt: true },
@@ -453,11 +424,10 @@ class MemorialPageService {
             }
         }
         try {
-            const { collaboratorService } = await Promise.resolve().then(() => __importStar(require('./collaboratorService')));
-            await collaboratorService.notifyPageChange(pageId, userId, 'Биография', 'Обновлена биография памятной страницы');
+            await collaboratorService_1.collaboratorService.notifyPageChange(pageId, userId, 'Биография', 'Обновлена биография памятной страницы');
         }
         catch (error) {
-            console.error('Failed to send change notification:', error);
+            logger_1.logger.error('Failed to send change notification', error);
         }
         return this.getBiography(pageId, userId);
     }

@@ -8,9 +8,12 @@ const database_1 = __importDefault(require("../config/database"));
 const errors_1 = require("../utils/errors");
 const geocodingService_1 = require("./geocodingService");
 const logger_1 = require("../utils/logger");
+const checkSectionAccess_1 = require("../utils/checkSectionAccess");
+const collaboratorService_1 = require("./collaboratorService");
 class BurialLocationService {
     async createOrUpdateBurialLocation(memorialPageId, userId, data) {
         await this.checkEditAccess(memorialPageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(memorialPageId, userId, 'burialLocation');
         if (data.latitude !== undefined && data.longitude !== undefined) {
             if (!geocodingService_1.geocodingService.validateCoordinates(data.latitude, data.longitude)) {
                 throw new errors_1.ValidationError('Некорректные координаты');
@@ -49,12 +52,16 @@ class BurialLocationService {
                 data: burialLocationData,
             });
         }
-        return {
+        const result = {
             ...burialLocation,
             latitude: burialLocation.latitude ? Number(burialLocation.latitude) : undefined,
             longitude: burialLocation.longitude ? Number(burialLocation.longitude) : undefined,
             geocodedAddress: geocodeResult?.formattedAddress,
         };
+        collaboratorService_1.collaboratorService
+            .notifyPageChange(memorialPageId, userId, 'Место захоронения', 'Обновлено место захоронения')
+            .catch(err => logger_1.logger.warn('Failed to send burial location change notification', err));
+        return result;
     }
     async getBurialLocation(memorialPageId) {
         const burialLocation = await database_1.default.burialLocation.findUnique({
@@ -71,6 +78,7 @@ class BurialLocationService {
     }
     async updateBurialLocation(memorialPageId, userId, data) {
         await this.checkEditAccess(memorialPageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(memorialPageId, userId, 'burialLocation');
         const existingLocation = await database_1.default.burialLocation.findUnique({
             where: { memorialPageId },
         });
@@ -126,6 +134,7 @@ class BurialLocationService {
     }
     async deleteBurialLocation(memorialPageId, userId) {
         await this.checkEditAccess(memorialPageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(memorialPageId, userId, 'burialLocation');
         const existingLocation = await database_1.default.burialLocation.findUnique({
             where: { memorialPageId },
         });

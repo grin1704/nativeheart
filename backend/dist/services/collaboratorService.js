@@ -536,7 +536,7 @@ class CollaboratorService {
             invitedAt: invitation.invitedAt,
         };
     }
-    async notifyPageChange(pageId, changeMadeBy, changeType, changeDescription) {
+    async notifyPageChange(pageId, changeMadeBy, changeType, changeDescription, changerNameOverride) {
         const page = await database_1.default.memorialPage.findUnique({
             where: { id: pageId },
             include: {
@@ -564,12 +564,15 @@ class CollaboratorService {
         if (!page) {
             return;
         }
-        const changeUser = await database_1.default.user.findUnique({
-            where: { id: changeMadeBy },
-            select: { name: true },
-        });
-        if (!changeUser) {
-            return;
+        let changerName = changerNameOverride;
+        if (!changerName) {
+            const changeUser = await database_1.default.user.findUnique({
+                where: { id: changeMadeBy },
+                select: { name: true },
+            });
+            if (!changeUser)
+                return;
+            changerName = changeUser.name;
         }
         const usersToNotify = [];
         if (page.owner.id !== changeMadeBy) {
@@ -591,7 +594,7 @@ class CollaboratorService {
                 await emailService_1.emailService.sendPageChangeNotification({
                     recipientEmail: user.email,
                     recipientName: user.name,
-                    changerName: changeUser.name,
+                    changerName: changerName,
                     memorialPageName: page.fullName,
                     changeType,
                     changeDescription,

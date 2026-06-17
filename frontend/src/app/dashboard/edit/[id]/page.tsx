@@ -14,6 +14,16 @@ import TimelineEditor from '@/components/editor/TimelineEditor';
 import CollaboratorsEditor from '@/components/editor/CollaboratorsEditor';
 import type { MemorialPage, User } from '@/types';
 
+interface CollaboratorPermissions {
+  basicInfo: boolean;
+  biography: boolean;
+  gallery: boolean;
+  memories: boolean;
+  timeline: boolean;
+  tributes: boolean;
+  burialLocation: boolean;
+}
+
 interface MemorialPageWithOwner extends MemorialPage {
   owner?: {
     id: string;
@@ -34,6 +44,7 @@ interface EditorSection {
 export default function MemorialPageEditor() {
   const [memorialPage, setMemorialPage] = useState<MemorialPageWithOwner | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [collaboratorPermissions, setCollaboratorPermissions] = useState<CollaboratorPermissions | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +76,6 @@ export default function MemorialPageEditor() {
       }
       // Backend returns { user: {...} }, so we need to extract the user object
       const userData = userResponse.data?.user || userResponse.data;
-      console.log('User data loaded:', userData);
       setUser(userData);
 
       // Load memorial page data
@@ -73,7 +83,20 @@ export default function MemorialPageEditor() {
       if (!pageResponse.success) {
         throw new Error(pageResponse.error || 'Ошибка загрузки страницы');
       }
-      setMemorialPage(pageResponse.data!);
+      const pageData = pageResponse.data!;
+      setMemorialPage(pageData);
+
+      // If current user is a collaborator (not owner), load their permissions
+      if (userData && pageData.ownerId !== userData.id) {
+        const collabResponse = await apiRequest<{ data: any[] }>('GET', `/memorial-pages/${pageId}/collaborators`);
+        if (collabResponse.success && collabResponse.data) {
+          const collabs = Array.isArray(collabResponse.data) ? collabResponse.data : (collabResponse.data as any).data || [];
+          const myCollab = collabs.find((c: any) => c.user?.id === userData.id);
+          if (myCollab?.permissions) {
+            setCollaboratorPermissions(myCollab.permissions);
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     } finally {
@@ -125,71 +148,77 @@ export default function MemorialPageEditor() {
   };
 
   const getSections = (): EditorSection[] => {
-    // Check if the page owner has premium access (not the current user)
-    // For editing, we should check the page owner's subscription, not the editor's
+    const isOwner = user?.id === memorialPage?.ownerId;
+
+    // Check premium access
     const pageOwnerHasPremium = memorialPage?.owner?.subscriptionType === 'premium' || 
                                memorialPage?.owner?.subscriptionType === 'trial';
-    
-    // If current user is the owner, use their subscription
-    // If current user is a collaborator, use page owner's subscription
-    const isPremium = (user?.id === memorialPage?.ownerId) 
+    const isPremium = isOwner
       ? (user?.subscriptionType === 'premium' || user?.subscriptionType === 'trial')
       : pageOwnerHasPremium;
-    
+
+    // For collaborators, check granular permissions
+    // Owners always have full access
+    const canEdit = (section: keyof CollaboratorPermissions): boolean => {
+      if (isOwner) return true;
+      if (!collaboratorPermissions) return false;
+      return collaboratorPermissions[section] === true;
+    };
+
     return [
       {
         id: 'basic',
         title: 'Основная информация',
         component: BasicInfoEditor,
-        enabled: true
+        enabled: canEdit('basicInfo')
       },
       {
         id: 'biography',
         title: 'Биография',
         component: BiographyEditor,
-        enabled: true
+        enabled: canEdit('biography')
       },
       {
         id: 'gallery',
         title: 'Фото и видео',
         component: MediaGalleryEditor,
-        enabled: isPremium
+        enabled: isPremium && canEdit('gallery')
       },
       {
         id: 'memories',
         title: 'Воспоминания',
         component: MemoriesEditor,
-        enabled: isPremium
+        enabled: isPremium && canEdit('memories')
       },
       {
         id: 'timeline',
         title: 'Хронология жизни',
         component: TimelineEditor,
-        enabled: true
+        enabled: canEdit('timeline')
       },
       {
         id: 'tributes',
         title: 'Слова близких',
         component: TributesEditor,
-        enabled: isPremium
+        enabled: isPremium && canEdit('tributes')
       },
       {
         id: 'burial',
         title: 'Место захоронения',
         component: BurialLocationEditor,
-        enabled: true
+        enabled: canEdit('burialLocation')
       },
       {
         id: 'qrcode',
         title: 'QR-код',
         component: QRCodeEditor,
-        enabled: true
+        enabled: isOwner
       },
       {
         id: 'collaborators',
         title: 'Редакторы',
         component: CollaboratorsEditor,
-        enabled: true
+        enabled: isOwner
       }
     ];
   };
@@ -288,9 +317,6 @@ export default function MemorialPageEditor() {
                       }`}
                     >
                       {section.title}
-                      {!section.enabled && (
-                        <span className="ml-2 text-xs text-gray-400">(Premium)</span>
-                      )}
                     </button>
                   </li>
                 ))}

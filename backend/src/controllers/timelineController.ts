@@ -7,6 +7,9 @@ import {
 } from '../validation/timeline';
 import { ValidationError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types/auth';
+import { checkSectionAccess } from '../utils/checkSectionAccess';
+import { collaboratorService } from '../services/collaboratorService';
+import { logger } from '../utils/logger';
 
 export class TimelineController {
   /**
@@ -41,8 +44,12 @@ export class TimelineController {
 
       // Проверяем права доступа
       await timelineService.checkEditAccess(memorialPageId, req.user!.id);
+      await checkSectionAccess(memorialPageId, req.user!.id, 'timeline');
 
       const event = await timelineService.createTimelineEvent(memorialPageId, value);
+
+      // Notify owner about changes
+      collaboratorService.notifyPageChange(memorialPageId, req.user!.id, 'Хронология', 'Добавлено событие в хронологию').catch(err => logger.warn('Failed to send timeline notification', err));
 
       res.status(201).json({
         success: true,
@@ -73,8 +80,12 @@ export class TimelineController {
       }
 
       await timelineService.checkEditAccess(existingEvent.memorialPageId, req.user!.id);
+      await checkSectionAccess(existingEvent.memorialPageId, req.user!.id, 'timeline');
 
       const event = await timelineService.updateTimelineEvent(eventId, value);
+
+      // Notify owner about changes
+      collaboratorService.notifyPageChange(existingEvent.memorialPageId, req.user!.id, 'Хронология', 'Изменено событие в хронологии').catch(err => logger.warn('Failed to send timeline notification', err));
 
       res.json({
         success: true,
@@ -100,6 +111,7 @@ export class TimelineController {
       }
 
       await timelineService.checkEditAccess(existingEvent.memorialPageId, req.user!.id);
+      await checkSectionAccess(existingEvent.memorialPageId, req.user!.id, 'timeline');
 
       await timelineService.deleteTimelineEvent(eventId);
 
@@ -126,6 +138,7 @@ export class TimelineController {
 
       // Проверяем права доступа
       await timelineService.checkEditAccess(memorialPageId, req.user!.id);
+      await checkSectionAccess(memorialPageId, req.user!.id, 'timeline');
 
       const events = await timelineService.reorderTimelineEvents(memorialPageId, value.eventIds);
 

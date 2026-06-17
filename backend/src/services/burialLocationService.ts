@@ -2,6 +2,8 @@ import prisma from '../config/database';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors';
 import { geocodingService, GeocodeResult } from './geocodingService';
 import { logger } from '../utils/logger';
+import { checkSectionAccess } from '../utils/checkSectionAccess';
+import { collaboratorService } from './collaboratorService';
 
 export interface CreateBurialLocationData {
   address: string;
@@ -36,6 +38,7 @@ export class BurialLocationService {
   ): Promise<BurialLocationWithGeocode> {
     // Check if memorial page exists and user has edit access
     await this.checkEditAccess(memorialPageId, userId);
+    await checkSectionAccess(memorialPageId, userId, 'burialLocation');
 
     // Validate coordinates if provided
     if (data.latitude !== undefined && data.longitude !== undefined) {
@@ -85,12 +88,19 @@ export class BurialLocationService {
       });
     }
 
-    return {
+    const result = {
       ...burialLocation,
       latitude: burialLocation.latitude ? Number(burialLocation.latitude) : undefined,
       longitude: burialLocation.longitude ? Number(burialLocation.longitude) : undefined,
       geocodedAddress: geocodeResult?.formattedAddress,
     };
+
+    // Notify owner about changes (non-blocking)
+    collaboratorService
+      .notifyPageChange(memorialPageId, userId, 'Место захоронения', 'Обновлено место захоронения')
+      .catch(err => logger.warn('Failed to send burial location change notification', err));
+
+    return result;
   }
 
   /**
@@ -122,6 +132,7 @@ export class BurialLocationService {
   ): Promise<BurialLocationWithGeocode> {
     // Check if memorial page exists and user has edit access
     await this.checkEditAccess(memorialPageId, userId);
+    await checkSectionAccess(memorialPageId, userId, 'burialLocation');
 
     // Check if burial location exists
     const existingLocation = await prisma.burialLocation.findUnique({
@@ -192,6 +203,7 @@ export class BurialLocationService {
   async deleteBurialLocation(memorialPageId: string, userId: string): Promise<void> {
     // Check if memorial page exists and user has edit access
     await this.checkEditAccess(memorialPageId, userId);
+    await checkSectionAccess(memorialPageId, userId, 'burialLocation');
 
     // Check if burial location exists
     const existingLocation = await prisma.burialLocation.findUnique({

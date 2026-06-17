@@ -35,6 +35,8 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.galleryController = exports.GalleryController = void 0;
 const galleryService_1 = require("../services/galleryService");
+const logger_1 = require("../utils/logger");
+const collaboratorService_1 = require("../services/collaboratorService");
 class GalleryController {
     async getPhotoGallery(req, res) {
         try {
@@ -79,6 +81,7 @@ class GalleryController {
                 return;
             }
             const galleryItem = await galleryService_1.galleryService.addPhotoToGallery(pageId, req.user.id, { mediaFileId, title, description });
+            collaboratorService_1.collaboratorService.notifyPageChange(pageId, req.user.id, 'Галерея', 'Добавлено фото в галерею').catch(err => logger_1.logger.warn('Failed to send gallery notification', err));
             res.status(201).json({
                 success: true,
                 data: galleryItem,
@@ -117,6 +120,7 @@ class GalleryController {
                 thumbnailUrl
             });
             console.log('✅ Видео успешно добавлено:', galleryItem.id);
+            collaboratorService_1.collaboratorService.notifyPageChange(pageId, req.user.id, 'Галерея', 'Добавлено видео в галерею').catch(err => logger_1.logger.warn('Failed to send gallery notification', err));
             res.status(201).json({
                 success: true,
                 data: galleryItem,
@@ -169,8 +173,6 @@ class GalleryController {
                 updateData.description = description;
             if (orderIndex !== undefined)
                 updateData.orderIndex = Number(orderIndex);
-            console.log(`🔍 Controller received:`, { title, description, orderIndex });
-            console.log(`🔍 Prepared updateData:`, updateData);
             const updatedItem = await galleryService_1.galleryService.updatePhotoGalleryItem(pageId, itemId, req.user.id, updateData);
             res.json({
                 success: true,

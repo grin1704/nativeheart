@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, ForbiddenError } from '../utils/errors';
+import { checkSectionAccess } from '../utils/checkSectionAccess';
 
 const prisma = new PrismaClient();
 

@@ -1,6 +1,8 @@
 import { Response } from 'express';
 import { galleryService } from '../services/galleryService';
 import { AuthenticatedRequest } from '../types/auth';
+import { logger } from '../utils/logger';
+import { collaboratorService } from '../services/collaboratorService';
 
 export class GalleryController {
   /**
@@ -66,6 +68,9 @@ export class GalleryController {
         { mediaFileId, title, description }
       );
 
+      // Notify owner about changes
+      collaboratorService.notifyPageChange(pageId, req.user.id, 'Галерея', 'Добавлено фото в галерею').catch(err => logger.warn('Failed to send gallery notification', err));
+
       res.status(201).json({
         success: true,
         data: galleryItem,
@@ -115,6 +120,9 @@ export class GalleryController {
       );
 
       console.log('✅ Видео успешно добавлено:', galleryItem.id);
+
+      // Notify owner about changes
+      collaboratorService.notifyPageChange(pageId, req.user.id, 'Галерея', 'Добавлено видео в галерею').catch(err => logger.warn('Failed to send gallery notification', err));
 
       res.status(201).json({
         success: true,
@@ -178,9 +186,6 @@ export class GalleryController {
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
       if (orderIndex !== undefined) updateData.orderIndex = Number(orderIndex);
-
-      console.log(`🔍 Controller received:`, { title, description, orderIndex });
-      console.log(`🔍 Prepared updateData:`, updateData);
 
       const updatedItem = await galleryService.updatePhotoGalleryItem(
         pageId,

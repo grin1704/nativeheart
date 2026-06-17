@@ -3,6 +3,9 @@ import { PaginationParams, PaginatedResponse } from '../types';
 import { getFeatureAccess } from '../utils/subscription';
 import { SubscriptionType } from '../types/auth';
 import prisma from '../config/database';
+import { checkSectionAccess } from '../utils/checkSectionAccess';
+import { collaboratorService } from './collaboratorService';
+import { logger } from '../utils/logger';
 
 export interface CreateMemoryData {
   date: Date;
@@ -50,6 +53,7 @@ export class MemoryService {
   ): Promise<MemoryWithPhotos> {
     // Check if memorial page exists and user has edit access
     await this.checkEditAccess(memorialPageId, userId);
+    await checkSectionAccess(memorialPageId, userId, 'memories');
 
     // Check if memories feature is available for the page owner
     await this.checkMemoriesFeatureAccess(memorialPageId);
@@ -75,7 +79,14 @@ export class MemoryService {
     }
 
     // Return memory with photos
-    return this.getMemoryById(memory.id);
+    const result = await this.getMemoryById(memory.id);
+
+    // Notify owner about changes (non-blocking)
+    collaboratorService
+      .notifyPageChange(memorialPageId, userId, 'Воспоминания', 'Добавлено новое воспоминание')
+      .catch(err => logger.warn('Failed to send memory change notification', err));
+
+    return result;
   }
 
   /**

@@ -37,6 +37,7 @@ exports.galleryService = exports.GalleryService = void 0;
 const client_1 = require("@prisma/client");
 const errors_1 = require("../utils/errors");
 const subscription_1 = require("../utils/subscription");
+const checkSectionAccess_1 = require("../utils/checkSectionAccess");
 const prisma = new client_1.PrismaClient();
 class GalleryService {
     async checkEditAccess(pageId, userId) {
@@ -164,6 +165,7 @@ class GalleryService {
     }
     async addPhotoToGallery(pageId, userId, data) {
         await this.checkEditAccess(pageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(pageId, userId, 'gallery');
         const featureAccess = await this.getPageFeatureAccess(pageId);
         if (!featureAccess.photoGallery) {
             throw new errors_1.ForbiddenError('Фотогалерея недоступна для данного типа подписки');
@@ -307,8 +309,6 @@ class GalleryService {
         if (!existingItem) {
             throw new errors_1.NotFoundError('Элемент фотогалереи не найден');
         }
-        console.log(`📝 Updating photo gallery item ${itemId}:`, data);
-        console.log(`📝 Existing item:`, existingItem);
         try {
             const updatedItem = await prisma.photoGallery.update({
                 where: { id: itemId },
@@ -327,11 +327,10 @@ class GalleryService {
                     },
                 },
             });
-            console.log(`✅ Updated photo gallery item ${itemId}, new orderIndex: ${updatedItem.orderIndex}`);
             return updatedItem;
         }
         catch (error) {
-            console.error(`❌ Prisma update error for ${itemId}:`, error);
+            console.error(`Prisma update error for ${itemId}:`, error);
             throw error;
         }
     }

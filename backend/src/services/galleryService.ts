@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors';
 import { getFeatureAccess } from '../utils/subscription';
 import { SubscriptionType } from '../types/auth';
+import { checkSectionAccess } from '../utils/checkSectionAccess';
 
 const prisma = new PrismaClient();
 
@@ -234,6 +235,7 @@ export class GalleryService {
   ): Promise<GalleryItem> {
     // Check edit permissions
     await this.checkEditAccess(pageId, userId);
+    await checkSectionAccess(pageId, userId, 'gallery');
 
     // Check feature access
     const featureAccess = await this.getPageFeatureAccess(pageId);
@@ -436,9 +438,6 @@ export class GalleryService {
       throw new NotFoundError('Элемент фотогалереи не найден');
     }
 
-    console.log(`📝 Updating photo gallery item ${itemId}:`, data);
-    console.log(`📝 Existing item:`, existingItem);
-
     // Update item
     try {
       const updatedItem = await prisma.photoGallery.update({
@@ -459,10 +458,9 @@ export class GalleryService {
         },
       });
 
-      console.log(`✅ Updated photo gallery item ${itemId}, new orderIndex: ${updatedItem.orderIndex}`);
       return updatedItem;
     } catch (error) {
-      console.error(`❌ Prisma update error for ${itemId}:`, error);
+      console.error(`Prisma update error for ${itemId}:`, error);
       throw error;
     }
   }

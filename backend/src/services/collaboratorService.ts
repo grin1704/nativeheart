@@ -739,7 +739,8 @@ export class CollaboratorService {
     pageId: string,
     changeMadeBy: string,
     changeType: string,
-    changeDescription: string
+    changeDescription: string,
+    changerNameOverride?: string
   ): Promise<void> {
     // Get page info with owner and collaborators
     const page = await prisma.memorialPage.findUnique({
@@ -772,13 +773,14 @@ export class CollaboratorService {
     }
 
     // Get the user who made the change
-    const changeUser = await prisma.user.findUnique({
-      where: { id: changeMadeBy },
-      select: { name: true },
-    });
-
-    if (!changeUser) {
-      return;
+    let changerName = changerNameOverride;
+    if (!changerName) {
+      const changeUser = await prisma.user.findUnique({
+        where: { id: changeMadeBy },
+        select: { name: true },
+      });
+      if (!changeUser) return;
+      changerName = changeUser.name;
     }
 
     // Collect all users to notify (owner + collaborators, excluding the one who made the change)
@@ -806,7 +808,7 @@ export class CollaboratorService {
         await emailService.sendPageChangeNotification({
           recipientEmail: user.email,
           recipientName: user.name,
-          changerName: changeUser.name,
+          changerName: changerName!,
           memorialPageName: page.fullName,
           changeType,
           changeDescription,

@@ -1,5 +1,8 @@
 import { generateSlug } from '../utils/slug';
 import { qrCodePlateService } from './qrCodePlateService';
+import { checkSectionAccess } from '../utils/checkSectionAccess';
+import { collaboratorService } from './collaboratorService';
+import { logger } from '../utils/logger';
 
 // Helper function to generate unique slug
 async function generateUniqueSlug(fullName: string, excludeSlug?: string): Promise<string> {
@@ -340,6 +343,7 @@ export class MemorialPageService {
 
     // Check edit permissions
     await this.checkEditAccess(pageId, userId);
+    await checkSectionAccess(pageId, userId, 'basicInfo');
 
     // Validate main photo if provided
     if (data.mainPhotoId) {
@@ -412,9 +416,8 @@ export class MemorialPageService {
       },
     });
 
-    // Send notification about page changes (import collaboratorService when needed)
+    // Send notification about page changes
     try {
-      const { collaboratorService } = await import('./collaboratorService');
       await collaboratorService.notifyPageChange(
         pageId,
         userId,
@@ -422,7 +425,7 @@ export class MemorialPageService {
         'Обновлена основная информация о памятной странице'
       );
     } catch (error) {
-      console.error('Failed to send change notification:', error);
+      logger.error('Failed to send change notification', error);
     }
 
     return updatedPage;
@@ -572,6 +575,7 @@ export class MemorialPageService {
   ): Promise<BiographyData> {
     // Check edit permissions
     await this.checkEditAccess(pageId, userId);
+    await checkSectionAccess(pageId, userId, 'biography');
 
     // Get user's subscription info
     const user = await prisma.user.findUnique({
@@ -642,7 +646,6 @@ export class MemorialPageService {
 
     // Send notification about biography changes
     try {
-      const { collaboratorService } = await import('./collaboratorService');
       await collaboratorService.notifyPageChange(
         pageId,
         userId,
@@ -650,7 +653,7 @@ export class MemorialPageService {
         'Обновлена биография памятной страницы'
       );
     } catch (error) {
-      console.error('Failed to send change notification:', error);
+      logger.error('Failed to send change notification', error);
     }
 
     // Return updated biography data

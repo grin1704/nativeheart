@@ -7,9 +7,13 @@ exports.memoryService = exports.MemoryService = void 0;
 const errors_1 = require("../utils/errors");
 const subscription_1 = require("../utils/subscription");
 const database_1 = __importDefault(require("../config/database"));
+const checkSectionAccess_1 = require("../utils/checkSectionAccess");
+const collaboratorService_1 = require("./collaboratorService");
+const logger_1 = require("../utils/logger");
 class MemoryService {
     async createMemory(memorialPageId, userId, data) {
         await this.checkEditAccess(memorialPageId, userId);
+        await (0, checkSectionAccess_1.checkSectionAccess)(memorialPageId, userId, 'memories');
         await this.checkMemoriesFeatureAccess(memorialPageId);
         if (data.photoIds && data.photoIds.length > 0) {
             await this.validatePhotoIds(data.photoIds, userId);
@@ -25,7 +29,11 @@ class MemoryService {
         if (data.photoIds && data.photoIds.length > 0) {
             await this.addPhotosToMemory(memory.id, data.photoIds);
         }
-        return this.getMemoryById(memory.id);
+        const result = await this.getMemoryById(memory.id);
+        collaboratorService_1.collaboratorService
+            .notifyPageChange(memorialPageId, userId, 'Воспоминания', 'Добавлено новое воспоминание')
+            .catch(err => logger_1.logger.warn('Failed to send memory change notification', err));
+        return result;
     }
     async getMemoryById(memoryId) {
         const memory = await database_1.default.memory.findUnique({
