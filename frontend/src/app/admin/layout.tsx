@@ -24,11 +24,17 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
 
+  // Re-run on navigation: layouts persist across client-side navigation in the
+  // App Router, so a post-login router.push('/admin') would not re-trigger a
+  // mount-only effect, leaving adminUser null (blank screen until reload).
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!adminUser) {
+      checkAuth();
+    }
+  }, [pathname]);
 
   const checkAuth = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
