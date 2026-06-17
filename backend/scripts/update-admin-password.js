@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -6,9 +7,13 @@ const prisma = new PrismaClient();
 async function updateAdminPassword() {
   try {
     console.log('🔐 Обновление пароля администратора...');
-    
-    // Генерируем безопасный пароль
-    const newPassword = '***REMOVED***';
+
+    // Пароль берётся из аргумента или переменной окружения, не хранится в коде
+    const newPassword = process.argv[2] || process.env.ADMIN_SEED_PASSWORD;
+    if (!newPassword) {
+      console.error('❌ Укажите пароль: node scripts/update-admin-password.js <password>  (или задайте ADMIN_SEED_PASSWORD)');
+      process.exit(1);
+    }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     // Обновляем пароль для супер-админа
@@ -18,10 +23,8 @@ async function updateAdminPassword() {
     });
     
     console.log('✅ Пароль администратора успешно обновлен!');
-    console.log('\n🔑 Новые учетные данные:');
     console.log(`Email: ${updatedAdmin.email}`);
-    console.log(`Пароль: ${newPassword}`);
-    console.log('\n⚠️ Сохраните эти данные в безопасном месте!');
+    console.log('\n⚠️ Пароль не выводится в лог. Сохраните его в безопасном месте.');
     
   } catch (error) {
     console.error('❌ Ошибка обновления пароля:', error);

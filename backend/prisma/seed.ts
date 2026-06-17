@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -7,7 +8,11 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   // Create admin users
-  const adminPassword = await bcrypt.hash('***REMOVED***', 10);
+  const adminSeedPassword = process.env.ADMIN_SEED_PASSWORD;
+  if (!adminSeedPassword) {
+    throw new Error('ADMIN_SEED_PASSWORD is not set. Define it in backend/.env before seeding.');
+  }
+  const adminPassword = await bcrypt.hash(adminSeedPassword, 10);
   const superAdmin = await prismaClient.adminUser.upsert({
     where: { email: 'admin@memorial-pages.ru' },
     update: {},
@@ -334,8 +339,8 @@ async function main() {
   console.log('- 7 system settings');
   console.log('- 1 content moderation entry');
   console.log('\n🔑 Login credentials:');
-  console.log('Admin: admin@memorial-pages.ru / ***REMOVED***');
-  console.log('Moderator: moderator@memorial-pages.ru / ***REMOVED***');
+  console.log('Admin: admin@memorial-pages.ru (password from ADMIN_SEED_PASSWORD)');
+  console.log('Moderator: moderator@memorial-pages.ru (password from ADMIN_SEED_PASSWORD)');
   console.log('Users: trial@example.com, free@example.com, premium@example.com / password123');
 }
 

@@ -90,7 +90,7 @@
 
 **Админ:**
 - Email: `admin@memorial-pages.ru`
-- Пароль: `***REMOVED***`
+- Пароль: см. `backend/.env` (`ADMIN_SEED_PASSWORD`)
 
 **Пользователи:**
 - Email: `trial@example.com` / `free@example.com` / `premium@example.com`

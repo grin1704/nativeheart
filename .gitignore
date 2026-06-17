@@ -129,3 +129,5 @@ apply-*.js
 create-*.js
 set-*.js
 setup-*.js
+# Local admin credentials cheat-sheet (never commit)
+ADMIN_CREDENTIALS.md

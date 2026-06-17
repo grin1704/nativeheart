@@ -79,7 +79,7 @@ start_services() {
     echo ""
     echo "🔑 Админ данные:"
     echo "   Email:    admin@memorial-pages.ru"
-    echo "   Пароль:   ***REMOVED***"
+    echo "   Пароль:   см. backend/.env (ADMIN_SEED_PASSWORD)"
     echo ""
     echo "⏹️  Для остановки: ./scripts/dev-stop.sh"
     echo "📊 Для мониторинга: ./scripts/dev-status.sh"

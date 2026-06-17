@@ -190,7 +190,7 @@ npm run dev
 
 **Администратор:**
 - Email: `admin@memorial-pages.ru`
-- Пароль: `***REMOVED***`
+- Пароль: см. `backend/.env` (`ADMIN_SEED_PASSWORD`)
 
 **Тестовые пользователи:**
 - `trial@example.com` / `password123`
