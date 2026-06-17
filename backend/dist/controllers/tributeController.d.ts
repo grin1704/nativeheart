@@ -5,5 +5,8 @@ export declare const getTributeById: (req: Request, res: Response, next: NextFun
 export declare const updateTribute: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const deleteTribute: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const moderateTribute: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export declare const likeTribute: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export declare const unlikeTribute: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export declare const getLikeStatus: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const getTributesForModeration: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 //# sourceMappingURL=tributeController.d.ts.map

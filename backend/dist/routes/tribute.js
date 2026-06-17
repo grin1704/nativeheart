@@ -10,6 +10,9 @@ router.get('/memorial-pages/:memorialPageId/tributes', optionalAuth_1.optionalAu
 router.post('/memorial-pages/:memorialPageId/tributes', optionalAuth_1.optionalAuth, passwordSession_1.checkPasswordAccess, tributeController_1.createTribute);
 router.get('/memorial-pages/:memorialPageId/tributes/all', auth_1.authenticateToken, tributeController_1.getTributes);
 router.get('/tributes/:id', optionalAuth_1.optionalAuth, tributeController_1.getTributeById);
+router.post('/tributes/like-status', optionalAuth_1.optionalAuth, tributeController_1.getLikeStatus);
+router.post('/tributes/:id/like', optionalAuth_1.optionalAuth, tributeController_1.likeTribute);
+router.delete('/tributes/:id/like', optionalAuth_1.optionalAuth, tributeController_1.unlikeTribute);
 router.put('/tributes/:id', auth_1.authenticateToken, tributeController_1.updateTribute);
 router.delete('/tributes/:id', auth_1.authenticateToken, tributeController_1.deleteTribute);
 router.patch('/tributes/:id/moderate', auth_1.authenticateToken, tributeController_1.moderateTribute);

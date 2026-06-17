@@ -502,8 +502,34 @@ class TributeService {
     }
   }
 
+  /**
+   * Build the identity filter for a like. A like is matched by EITHER the
+   * logged-in user OR the anonymous fingerprint, so an anonymous like made in a
+   * browser can still be found/toggled once that same user logs in (and vice
+   * versa). This also prevents duplicate inserts that would violate the
+   * (tributeId, userId) / (tributeId, fingerprint) unique constraints.
+   * Returns null when neither identifier is provided, so callers can reject
+   * anonymous, unidentifiable requests instead of creating orphan likes.
+   */
+  private buildLikeIdentityWhere(
+    userId?: string,
+    fingerprint?: string
+  ): { userId: string } | { fingerprint: string } | { OR: Array<{ userId: string } | { fingerprint: string }> } | null {
+    const conditions: Array<{ userId: string } | { fingerprint: string }> = [];
+    if (userId) conditions.push({ userId });
+    if (fingerprint) conditions.push({ fingerprint });
+
+    if (conditions.length === 0) return null;
+    return conditions.length === 1 ? conditions[0] : { OR: conditions };
+  }
+
   async likeTribute(tributeId: string, userId?: string, fingerprint?: string): Promise<{ likesCount: number; isLiked: boolean }> {
     try {
+      const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+      if (!identityWhere) {
+        throw new ValidationError('A user session or fingerprint is required to like a tribute');
+      }
+
       // Check if tribute exists
       const tribute = await prisma.tribute.findUnique({
         where: { id: tributeId }
@@ -517,10 +543,7 @@ class TributeService {
       const existingLike = await prisma.tributeLike.findFirst({
         where: {
           tributeId,
-          OR: [
-            userId ? { userId } : {},
-            fingerprint ? { fingerprint } : {}
-          ].filter(obj => Object.keys(obj).length > 0)
+          ...identityWhere
         }
       });
 
@@ -575,6 +598,11 @@ class TributeService {
 
   async unlikeTribute(tributeId: string, userId?: string, fingerprint?: string): Promise<{ likesCount: number; isLiked: boolean }> {
     try {
+      const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+      if (!identityWhere) {
+        throw new ValidationError('A user session or fingerprint is required to unlike a tribute');
+      }
+
       // Check if tribute exists
       const tribute = await prisma.tribute.findUnique({
         where: { id: tributeId }
@@ -588,10 +616,7 @@ class TributeService {
       const existingLike = await prisma.tributeLike.findFirst({
         where: {
           tributeId,
-          OR: [
-            userId ? { userId } : {},
-            fingerprint ? { fingerprint } : {}
-          ].filter(obj => Object.keys(obj).length > 0)
+          ...identityWhere
         }
       });
 
@@ -642,19 +667,44 @@ class TributeService {
 
   async checkIfLiked(tributeId: string, userId?: string, fingerprint?: string): Promise<boolean> {
     try {
+      const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+      if (!identityWhere) return false;
+
       const like = await prisma.tributeLike.findFirst({
         where: {
           tributeId,
-          OR: [
-            userId ? { userId } : {},
-            fingerprint ? { fingerprint } : {}
-          ].filter(obj => Object.keys(obj).length > 0)
+          ...identityWhere
         }
       });
 
       return !!like;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Return the subset of the given tribute ids that the current identity
+   * (logged-in user and/or anonymous fingerprint) has already liked. Used by
+   * the client to render correct like state on load, independent of any
+   * client-side cache (e.g. an incognito window with empty localStorage).
+   */
+  async getLikedTributeIds(tributeIds: string[], userId?: string, fingerprint?: string): Promise<string[]> {
+    try {
+      const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+      if (!identityWhere || tributeIds.length === 0) return [];
+
+      const likes = await prisma.tributeLike.findMany({
+        where: {
+          tributeId: { in: tributeIds },
+          ...identityWhere
+        },
+        select: { tributeId: true }
+      });
+
+      return [...new Set(likes.map(like => like.tributeId))];
+    } catch (error) {
+      return [];
     }
   }
 }

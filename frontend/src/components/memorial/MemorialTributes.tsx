@@ -55,37 +55,46 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
   const [likedTributes, setLikedTributes] = useState<Set<string>>(new Set());
   const [fingerprint, setFingerprint] = useState<string>('');
 
-  // Generate fingerprint on mount
+  // Generate or restore fingerprint on mount
   useEffect(() => {
-    const generateFingerprint = () => {
+    const FINGERPRINT_KEY = 'tribute_fingerprint';
+
+    const getOrCreateFingerprint = (): string => {
+      const stored = localStorage.getItem(FINGERPRINT_KEY);
+      if (stored) return stored;
+
       const nav = navigator as any;
-      const screen = window.screen;
       const data = [
         nav.userAgent,
         nav.language,
-        screen.colorDepth,
-        screen.width,
-        screen.height,
+        window.screen.colorDepth,
+        window.screen.width,
+        window.screen.height,
         new Date().getTimezoneOffset()
       ].join('|');
-      
-      // Simple hash function
+
       let hash = 0;
       for (let i = 0; i < data.length; i++) {
         const char = data.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
         hash = hash & hash;
       }
-      return Math.abs(hash).toString(36);
+      const fp = Math.abs(hash).toString(36);
+      localStorage.setItem(FINGERPRINT_KEY, fp);
+      return fp;
     };
 
-    const fp = generateFingerprint();
+    const fp = getOrCreateFingerprint();
     setFingerprint(fp);
 
     // Load liked tributes from localStorage
     const stored = localStorage.getItem(`liked_tributes_${fp}`);
     if (stored) {
-      setLikedTributes(new Set(JSON.parse(stored)));
+      try {
+        setLikedTributes(new Set(JSON.parse(stored)));
+      } catch {
+        // ignore corrupt data
+      }
     }
   }, []);
 
@@ -121,6 +130,29 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
   useEffect(() => {
     fetchTributes(page);
   }, [memorialPageId, page]);
+
+  // Sync like state from the server (source of truth) so it's correct even when
+  // localStorage is empty (e.g. incognito) or stale (e.g. another device).
+  useEffect(() => {
+    if (!fingerprint || tributes.length === 0) return;
+
+    const syncLikeStatus = async () => {
+      const tributeIds = tributes.map(t => t.id);
+      const response = await apiRequest<{ likedTributeIds: string[] }>(
+        'POST',
+        '/tributes/like-status',
+        { tributeIds, fingerprint }
+      );
+
+      if (response.success && response.data?.likedTributeIds) {
+        const liked = new Set(response.data.likedTributeIds);
+        setLikedTributes(liked);
+        localStorage.setItem(`liked_tributes_${fingerprint}`, JSON.stringify(Array.from(liked)));
+      }
+    };
+
+    syncLikeStatus();
+  }, [tributes, fingerprint]);
 
   const formatDate = (date: Date | string) => {
     const d = new Date(date);
@@ -158,21 +190,13 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
     if (!fingerprint) return;
 
     const isLiked = likedTributes.has(tributeId);
-    console.log('=== HANDLE LIKE CLICKED ===');
-    console.log('Tribute ID:', tributeId);
-    console.log('Is already liked:', isLiked);
-    console.log('Fingerprint:', fingerprint);
-    console.log('Liked tributes set:', Array.from(likedTributes));
 
     try {
       if (isLiked) {
-        // Unlike
         const response = await apiRequest<{ likesCount: number; isLiked: boolean }>(
           'DELETE',
           `/tributes/${tributeId}/like?fingerprint=${fingerprint}`
         );
-
-        console.log('Unlike response:', response);
 
         if (response.success && response.data) {
           setLikedTributes(prev => {
@@ -181,22 +205,16 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
             localStorage.setItem(`liked_tributes_${fingerprint}`, JSON.stringify(Array.from(newSet)));
             return newSet;
           });
-
-          setTributes(prev => prev.map(t => 
+          setTributes(prev => prev.map(t =>
             t.id === tributeId ? { ...t, likesCount: response.data!.likesCount } : t
           ));
         }
       } else {
-        // Like
         const response = await apiRequest<{ likesCount: number; isLiked: boolean }>(
           'POST',
           `/tributes/${tributeId}/like`,
           { fingerprint }
         );
-
-        console.log('Like response:', response);
-        console.log('Tribute ID:', tributeId);
-        console.log('New likes count:', response.data?.likesCount);
 
         if (response.success && response.data) {
           setLikedTributes(prev => {
@@ -205,22 +223,9 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
             localStorage.setItem(`liked_tributes_${fingerprint}`, JSON.stringify(Array.from(newSet)));
             return newSet;
           });
-
-          console.log('Updating tributes state...');
-          setTributes(prev => {
-            console.log('Current tributes:', prev);
-            const updated = prev.map(t => {
-              if (t.id === tributeId) {
-                console.log('Found tribute to update:', t);
-                console.log('Old likesCount:', t.likesCount);
-                console.log('New likesCount:', response.data!.likesCount);
-                return { ...t, likesCount: response.data!.likesCount };
-              }
-              return t;
-            });
-            console.log('Updated tributes:', updated);
-            return updated;
-          });
+          setTributes(prev => prev.map(t =>
+            t.id === tributeId ? { ...t, likesCount: response.data!.likesCount } : t
+          ));
         }
       }
     } catch (err) {
@@ -302,7 +307,6 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
         <div className="space-y-6">
           {tributes.map((tribute) => {
             const isLiked = likedTributes.has(tribute.id);
-            console.log(`Rendering tribute ${tribute.id}, likesCount: ${tribute.likesCount}`);
             
             return (
               <div key={tribute.id} className="bg-card border border-border rounded-lg p-6 shadow-sm relative">
@@ -344,8 +348,7 @@ export const MemorialTributes: React.FC<MemorialTributesProps> = ({ memorialPage
                     <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                       {tribute.likesCount}
                     </span>
-                  )}
-                </button>
+                  )}                </button>
                 
                 {/* Tribute text */}
                 <p className="text-muted-foreground whitespace-pre-wrap mb-4 pr-12">

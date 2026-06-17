@@ -58,6 +58,7 @@ declare class TributeService {
             totalPages: number;
         };
     }>;
+    private buildLikeIdentityWhere;
     likeTribute(tributeId: string, userId?: string, fingerprint?: string): Promise<{
         likesCount: number;
         isLiked: boolean;
@@ -67,6 +68,7 @@ declare class TributeService {
         isLiked: boolean;
     }>;
     checkIfLiked(tributeId: string, userId?: string, fingerprint?: string): Promise<boolean>;
+    getLikedTributeIds(tributeIds: string[], userId?: string, fingerprint?: string): Promise<string[]>;
 }
 declare const _default: TributeService;
 export default _default;

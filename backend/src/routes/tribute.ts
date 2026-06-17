@@ -6,7 +6,10 @@ import {
   updateTribute,
   deleteTribute,
   moderateTribute,
-  getTributesForModeration
+  getTributesForModeration,
+  likeTribute,
+  unlikeTribute,
+  getLikeStatus
 } from '../controllers/tributeController';
 import { authenticateToken } from '../middleware/auth';
 import { optionalAuth } from '../middleware/optionalAuth';
@@ -27,6 +30,13 @@ router.get('/memorial-pages/:memorialPageId/tributes/all', authenticateToken, ge
 
 // Get a specific tribute by ID (public access)
 router.get('/tributes/:id', optionalAuth, getTributeById);
+
+// Like status for a batch of tributes (public, identified by user and/or fingerprint)
+router.post('/tributes/like-status', optionalAuth, getLikeStatus);
+
+// Like/unlike a tribute (public, fingerprint-based)
+router.post('/tributes/:id/like', optionalAuth, likeTribute);
+router.delete('/tributes/:id/like', optionalAuth, unlikeTribute);
 
 // Protected routes (authentication required)
 // Update a tribute (for moderation or author edits)

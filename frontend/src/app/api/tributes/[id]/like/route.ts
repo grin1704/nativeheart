@@ -9,12 +9,14 @@ export async function POST(
   try {
     const tributeId = params.id;
     const body = await request.json();
+    const authorization = request.headers.get('authorization');
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (authorization) headers['Authorization'] = authorization;
 
     const response = await fetch(`${BACKEND_URL}/api/tributes/${tributeId}/like`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 
@@ -37,11 +39,16 @@ export async function DELETE(
     const tributeId = params.id;
     const { searchParams } = new URL(request.url);
     const fingerprint = searchParams.get('fingerprint');
+    const authorization = request.headers.get('authorization');
+
+    const headers: Record<string, string> = {};
+    if (authorization) headers['Authorization'] = authorization;
 
     const response = await fetch(
       `${BACKEND_URL}/api/tributes/${tributeId}/like?fingerprint=${fingerprint}`,
       {
         method: 'DELETE',
+        headers,
       }
     );
 

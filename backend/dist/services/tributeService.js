@@ -364,8 +364,22 @@ class TributeService {
             throw new errors_1.AppError('Failed to get tributes for moderation', 500);
         }
     }
+    buildLikeIdentityWhere(userId, fingerprint) {
+        const conditions = [];
+        if (userId)
+            conditions.push({ userId });
+        if (fingerprint)
+            conditions.push({ fingerprint });
+        if (conditions.length === 0)
+            return null;
+        return conditions.length === 1 ? conditions[0] : { OR: conditions };
+    }
     async likeTribute(tributeId, userId, fingerprint) {
         try {
+            const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+            if (!identityWhere) {
+                throw new errors_1.ValidationError('A user session or fingerprint is required to like a tribute');
+            }
             const tribute = await database_1.default.tribute.findUnique({
                 where: { id: tributeId }
             });
@@ -375,10 +389,7 @@ class TributeService {
             const existingLike = await database_1.default.tributeLike.findFirst({
                 where: {
                     tributeId,
-                    OR: [
-                        userId ? { userId } : {},
-                        fingerprint ? { fingerprint } : {}
-                    ].filter(obj => Object.keys(obj).length > 0)
+                    ...identityWhere
                 }
             });
             if (existingLike) {
@@ -426,6 +437,10 @@ class TributeService {
     }
     async unlikeTribute(tributeId, userId, fingerprint) {
         try {
+            const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+            if (!identityWhere) {
+                throw new errors_1.ValidationError('A user session or fingerprint is required to unlike a tribute');
+            }
             const tribute = await database_1.default.tribute.findUnique({
                 where: { id: tributeId }
             });
@@ -435,10 +450,7 @@ class TributeService {
             const existingLike = await database_1.default.tributeLike.findFirst({
                 where: {
                     tributeId,
-                    OR: [
-                        userId ? { userId } : {},
-                        fingerprint ? { fingerprint } : {}
-                    ].filter(obj => Object.keys(obj).length > 0)
+                    ...identityWhere
                 }
             });
             if (!existingLike) {
@@ -482,19 +494,37 @@ class TributeService {
     }
     async checkIfLiked(tributeId, userId, fingerprint) {
         try {
+            const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+            if (!identityWhere)
+                return false;
             const like = await database_1.default.tributeLike.findFirst({
                 where: {
                     tributeId,
-                    OR: [
-                        userId ? { userId } : {},
-                        fingerprint ? { fingerprint } : {}
-                    ].filter(obj => Object.keys(obj).length > 0)
+                    ...identityWhere
                 }
             });
             return !!like;
         }
         catch (error) {
             return false;
+        }
+    }
+    async getLikedTributeIds(tributeIds, userId, fingerprint) {
+        try {
+            const identityWhere = this.buildLikeIdentityWhere(userId, fingerprint);
+            if (!identityWhere || tributeIds.length === 0)
+                return [];
+            const likes = await database_1.default.tributeLike.findMany({
+                where: {
+                    tributeId: { in: tributeIds },
+                    ...identityWhere
+                },
+                select: { tributeId: true }
+            });
+            return [...new Set(likes.map(like => like.tributeId))];
+        }
+        catch (error) {
+            return [];
         }
     }
 }

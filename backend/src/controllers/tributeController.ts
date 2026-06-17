@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import tributeService from '../services/tributeService';
+import { logger } from '../utils/logger';
 import {
   createTributeSchema,
   updateTributeSchema,
@@ -8,6 +9,7 @@ import {
 } from '../validation/tribute';
 import { ValidationError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types/auth';
+import { collaboratorService } from '../services/collaboratorService';
 
 export const createTribute = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -22,6 +24,9 @@ export const createTribute = async (req: Request, res: Response, next: NextFunct
       memorialPageId,
       ...value
     });
+
+    // Notify owner about new tribute
+    collaboratorService.notifyPageChange(memorialPageId, (req as AuthenticatedRequest).user?.id || '', 'Слова близких', `Оставлен новый отзыв от ${value.authorName}`, value.authorName).catch(err => logger.warn('Failed to send tribute notification', err));
 
     res.status(201).json({
       success: true,
@@ -128,6 +133,60 @@ export const moderateTribute = async (req: Request, res: Response, next: NextFun
     res.json({
       success: true,
       data: tribute
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const likeTribute = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { fingerprint } = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    const result = await tributeService.likeTribute(id, userId, fingerprint);
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const unlikeTribute = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const fingerprint = req.query.fingerprint as string | undefined;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    const result = await tributeService.unlikeTribute(id, userId, fingerprint);
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLikeStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tributeIds, fingerprint } = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    if (!Array.isArray(tributeIds)) {
+      throw new ValidationError('tributeIds must be an array');
+    }
+
+    const likedTributeIds = await tributeService.getLikedTributeIds(tributeIds, userId, fingerprint);
+
+    res.json({
+      success: true,
+      data: { likedTributeIds }
     });
   } catch (error) {
     next(error);
