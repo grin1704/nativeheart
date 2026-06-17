@@ -333,33 +333,27 @@ export default function MediaGalleryEditor({ memorialPage, user, onUpdate, onErr
     const isPhoto = activeTab === 'photos';
     const items = isPhoto ? photoGallery : videoGallery;
 
-    console.log('💾 Сохранение порядка:', items.map(i => ({ id: i.id, orderIndex: i.orderIndex })));
-
     setSavingOrder(true);
     try {
       // Обновляем последовательно, чтобы избежать конфликтов
       for (const item of items) {
-        console.log(`📤 Обновление ${item.id} → orderIndex: ${item.orderIndex}`);
         const result = await apiRequest('PUT', `/gallery/${memorialPage.id}/${isPhoto ? 'photos' : 'videos'}/${item.id}`, {
           orderIndex: item.orderIndex,
         });
         
         if (!result.success) {
-          console.error(`❌ Ошибка обновления ${item.id}:`, result.error);
+          console.error(`Ошибка обновления ${item.id}:`, result.error);
           onError(`Ошибка сохранения: ${result.error}`);
           return;
         }
       }
       
-      console.log('✅ Все обновления завершены');
-      
       setHasUnsavedOrder(false);
       
       // Перезагрузить галерею для проверки
       await loadGalleries();
-      console.log('✅ Галерея перезагружена');
     } catch (err) {
-      console.error('❌ Ошибка сохранения порядка:', err);
+      console.error('Ошибка сохранения порядка:', err);
       onError('Ошибка сохранения порядка');
     } finally {
       setSavingOrder(false);
@@ -602,21 +596,17 @@ export default function MediaGalleryEditor({ memorialPage, user, onUpdate, onErr
         description: videoInfo.description,
       };
       
-      console.log('📤 Отправка внешнего видео:', payload);
-      
       const response = await apiRequest<any>('POST', `/gallery/${memorialPage.id}/videos`, payload);
-
-      console.log('📥 Ответ сервера:', response);
 
       if (response.success) {
         await loadGalleries();
         setShowExternalVideoDialog(false);
       } else {
-        console.error('❌ Ошибка добавления:', response.error);
+        console.error('Ошибка добавления видео:', response.error);
         onError(response.error || 'Не удалось добавить видео');
       }
     } catch (err: any) {
-      console.error('❌ Исключение:', err);
+      console.error('Исключение при добавлении видео:', err);
       onError(err.message || 'Ошибка добавления видео');
     } finally {
       setUploading(false);

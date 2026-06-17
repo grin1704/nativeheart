@@ -74,8 +74,6 @@ export default function Dashboard() {
       }
 
       const userData = await userResponse.json();
-      console.log('📦 User data from API:', userData);
-      console.log('✉️ emailVerified:', userData.user?.emailVerified);
       setUser(userData.user);
 
       // Загружаем памятные страницы пользователя

@@ -65,24 +65,14 @@ export class MediaService {
     mimeType: string,
     uploadedBy: string | null
   ): Promise<UploadResult> {
-    console.log('[MediaService] uploadFile called:', {
-      originalName,
-      mimeType,
-      bufferSize: fileBuffer.length,
-      uploadedBy,
-      isYandexCloudConfigured
-    });
-
     // If Yandex Cloud is not configured, use local storage
     if (!isYandexCloudConfigured) {
-      console.log('Yandex Cloud not configured, using local storage');
       return localMediaService.uploadFile(fileBuffer, originalName, mimeType, uploadedBy);
     }
 
     // Validate file type and size
     try {
       this.validateFile(fileBuffer, mimeType);
-      console.log('[MediaService] File validation passed');
     } catch (error) {
       console.error('[MediaService] File validation failed:', error);
       throw error;
@@ -92,8 +82,6 @@ export class MediaService {
     const fileExtension = path.extname(originalName);
     const fileName = `${fileId}${fileExtension}`;
     const filePath = this.generateFilePath(fileName, mimeType);
-
-    console.log('[MediaService] Generated file path:', filePath);
 
     try {
       // Upload original file
@@ -105,33 +93,20 @@ export class MediaService {
         ACL: 'public-read'
       };
 
-      console.log('[MediaService] Uploading to S3:', {
-        bucket: this.bucketName,
-        key: filePath,
-        contentType: mimeType
-      });
-
       const uploadResult = await s3!.upload(uploadParams).promise();
       const fileUrl = uploadResult.Location;
-
-      console.log('[MediaService] S3 upload successful:', fileUrl);
 
       // Generate thumbnail for images
       let thumbnailUrl: string | undefined;
       if (this.isImage(mimeType)) {
-        console.log('[MediaService] Generating thumbnail...');
         try {
           thumbnailUrl = await this.generateThumbnail(fileBuffer, fileId, fileExtension);
-          console.log('[MediaService] Thumbnail generated:', thumbnailUrl);
         } catch (thumbnailError) {
-          // Log thumbnail generation error but don't fail the upload
+          // Non-critical — continue without thumbnail
           console.error('[MediaService] Thumbnail generation failed (non-critical):', thumbnailError);
-          console.log('[MediaService] Continuing without thumbnail');
         }
       }
 
-      // Save to database
-      console.log('[MediaService] Saving to database...');
       const mediaFile = await prisma.mediaFile.create({
         data: {
           id: fileId,
@@ -144,8 +119,6 @@ export class MediaService {
         }
       });
 
-      console.log('[MediaService] Database save successful:', mediaFile.id);
-
       return {
         mediaFile: {
           ...mediaFile,
@@ -155,10 +128,6 @@ export class MediaService {
       };
     } catch (error) {
       console.error('[MediaService] Error uploading file:', error);
-      if (error instanceof Error) {
-        console.error('[MediaService] Error message:', error.message);
-        console.error('[MediaService] Error stack:', error.stack);
-      }
       throw new Error('Failed to upload file to cloud storage');
     }
   }
@@ -182,12 +151,6 @@ export class MediaService {
     try {
       // Validate image buffer before processing
       const metadata = await sharp(imageBuffer).metadata();
-      console.log('[MediaService] Image metadata:', {
-        format: metadata.format,
-        width: metadata.width,
-        height: metadata.height,
-        size: imageBuffer.length
-      });
 
       // Resize to fixed width, maintaining aspect ratio
       // This prevents layout shifts in masonry grids
@@ -241,37 +204,31 @@ export class MediaService {
 
       console.log('Deleting file from Yandex Cloud:', {
         fileId,
-        url: mediaFile.url,
-        thumbnailUrl: mediaFile.thumbnailUrl
+        url: mediaFile.url
       });
 
       // Extract file path from URL
       const filePath = this.extractFilePathFromUrl(mediaFile.url);
-      console.log('Extracted file path:', filePath);
       
       // Delete original file
       await s3!.deleteObject({
         Bucket: this.bucketName,
         Key: filePath
       }).promise();
-      console.log('Deleted original file from cloud');
 
       // Delete thumbnail if exists
       if (mediaFile.thumbnailUrl) {
         const thumbnailPath = this.extractFilePathFromUrl(mediaFile.thumbnailUrl);
-        console.log('Extracted thumbnail path:', thumbnailPath);
         await s3!.deleteObject({
           Bucket: this.bucketName,
           Key: thumbnailPath
         }).promise();
-        console.log('Deleted thumbnail from cloud');
       }
 
       // Remove from database
       await prisma.mediaFile.delete({
         where: { id: fileId }
       });
-      console.log('Deleted file record from database');
     } catch (error) {
       console.error('Error deleting file:', error);
       throw new Error('Failed to delete file');

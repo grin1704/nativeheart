@@ -19,12 +19,9 @@ export default function MemorialTimeline({ memorialPageId }: MemorialTimelinePro
   const loadEvents = async () => {
     try {
       setLoading(true);
-      console.log('Loading timeline events for page:', memorialPageId);
       const response = await apiRequest<TimelineEvent[]>('GET', `/memorial-pages/${memorialPageId}/timeline`);
-      console.log('Timeline response:', response);
       if (response.success) {
         setEvents(response.data || []);
-        console.log('Timeline events loaded:', response.data?.length || 0);
       } else {
         console.error('Timeline API error:', response.error);
       }

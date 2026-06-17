@@ -8,7 +8,6 @@ export async function GET(
 ) {
   try {
     const url = `${BACKEND_URL}/api/memorial-pages/${params.id}/timeline`;
-    console.log('[Timeline API] GET request to:', url);
     
     const response = await fetch(url, {
       headers: {
@@ -16,10 +15,7 @@ export async function GET(
       },
     });
 
-    console.log('[Timeline API] Backend response status:', response.status);
-    
     const data = await response.json();
-    console.log('[Timeline API] Backend response data:', data);
 
     if (!response.ok) {
       console.error('[Timeline API] Backend error:', data);

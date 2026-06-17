@@ -209,6 +209,33 @@ BACKUP_DIR="backups/backup_$(date +%Y%m%d_%H%M%S)" && mkdir -p "$BACKUP_DIR" && 
 - Команды БД: `cd backend && npm run db:migrate` / `npm run db:studio`
 - Prisma клиент генерируется в корневой `node_modules` (не в `backend/node_modules`)
 - После ручного применения SQL миграций нужно запускать `npx prisma generate` из корня
+- **`.next/` НЕ в git** — собирается на сервере внутри Docker при деплое
+- **`backend/dist/` в git** — собирается локально перед коммитом
+
+## OAuth (VK и Яндекс)
+
+### VK OAuth 2.1 с PKCE
+- Используется новый **VK ID** (`https://id.vk.com`), а не старый `oauth.vk.com`
+- Endpoint авторизации: `https://id.vk.com/authorize`
+- Обмен кода: `https://id.vk.com/oauth2/auth`
+- Данные пользователя: `https://id.vk.com/oauth2/user_info`
+- PKCE хранится в памяти (`pkceStore` Map) — при рестарте backend state инвалидируется
+- В настройках VK приложения (https://vk.com/apps?act=manage, ID: 54530279) должен быть включён **VK ID** и прописан redirect URI
+
+### Яндекс OAuth
+- Endpoint: `https://oauth.yandex.ru/authorize`
+- Данные пользователя: `https://login.yandex.ru/info?format=json`
+
+### Переменные окружения для OAuth
+```env
+# Локально (backend/.env)
+VK_REDIRECT_URI=http://localhost:3000/auth/vk/callback
+YANDEX_REDIRECT_URI=http://localhost:3000/auth/yandex/callback
+
+# На сервере (/opt/nativeheart/.env)
+VK_REDIRECT_URI=https://nativeheart.ru/auth/vk/callback
+YANDEX_REDIRECT_URI=https://nativeheart.ru/auth/yandex/callback
+```
 
 ## Продакшен деплой
 
@@ -245,20 +272,27 @@ docker compose -f docker-compose.prod.yml restart backend
 ```
 
 ### Деплой обновлений
-Сборка происходит **локально**, собранные артефакты (`backend/dist/`, `frontend/.next/`) коммитятся в git.
+Frontend **собирается на сервере** внутри Docker контейнера. `.next/` НЕ коммитится в git.
+Backend `dist/` коммитится в git (собирается локально).
 
 ```bash
-# 1. Локально — собрать и запушить
-cd backend && npm run build
-cd ../frontend
-NEXT_PUBLIC_API_URL=https://nativeheart.ru/api NEXT_PUBLIC_YANDEX_MAPS_API_KEY=<key> npm run build
-cd ..
+# 1. Локально — собрать backend и запушить
+cd backend && npm run build && cd ..
 git add -A && git commit -m "..." && git push
 
 # 2. На сервере — обновить и пересобрать Docker образы
 cd /opt/nativeheart && git pull
 docker compose -f docker-compose.prod.yml build --no-cache frontend
-docker compose -f docker-compose.prod.yml up -d frontend
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Важно:** при пересборке frontend nginx занимает порт 80 — если нужно пересобрать с нуля:
+```bash
+systemctl stop nginx
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml build --no-cache backend frontend
+docker compose -f docker-compose.prod.yml up -d
+systemctl start nginx
 ```
 
 ### Переменные окружения на сервере
@@ -267,6 +301,10 @@ docker compose -f docker-compose.prod.yml up -d frontend
 - `NEXT_PUBLIC_API_URL=https://nativeheart.ru/api`
 - `BACKEND_URL=http://backend:3001` (внутри Docker сети)
 - `DATABASE_URL` собирается из `POSTGRES_USER/PASSWORD/DB`
+- `VK_REDIRECT_URI=https://nativeheart.ru/auth/vk/callback`
+- `YANDEX_REDIRECT_URI=https://nativeheart.ru/auth/yandex/callback`
 
 ### Важно для API роутов Next.js
 Все server-side роуты в `frontend/src/app/api/` должны использовать `process.env.BACKEND_URL` (не `NEXT_PUBLIC_API_URL` и не `NEXT_PUBLIC_BACKEND_URL`) для обращения к backend внутри Docker сети.
+
+**Никогда не импортировать backend модули напрямую из frontend!** Только HTTP запросы к `BACKEND_URL`.
