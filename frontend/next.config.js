@@ -5,6 +5,26 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
+      // Документы/навигации всегда тянем из сети: иначе после релиза старый
+      // service worker отдаёт устаревший app-shell со ссылками на исчезнувшие
+      // JS-чанки → белый экран / «не обновляется» (на iOS лечилось только
+      // перезагрузкой телефона). Кеш остаётся запасным вариантом на офлайн.
+      urlPattern: ({ request, sameOrigin }) =>
+        sameOrigin && request.mode === 'navigate',
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'pages',
+        networkTimeoutSeconds: 3,
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 24 * 60 * 60, // 1 день
+        },
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
+      },
+    },
+    {
       urlPattern: /^https:\/\/storage\.yandexcloud\.net\/.*/i,
       handler: 'CacheFirst',
       options: {
