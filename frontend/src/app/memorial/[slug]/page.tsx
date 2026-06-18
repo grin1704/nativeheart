@@ -88,31 +88,76 @@ export default function PublicMemorialPage() {
     }
   }, [slug]);
 
-  // Персональные метаданные страницы: имя в заголовке и портрет как иконка.
-  // iOS считывает title и apple-touch-icon в момент «Добавить на экран „Домой"»,
-  // поэтому ярлык получает имя и фото покойного, а не общий логотип сервиса.
+  // Персональные метаданные страницы, чтобы ярлык «На экран „Домой"» вёл именно
+  // на эту страницу и показывал имя/портрет покойного. Ключевой момент: при
+  // наличии <link rel="manifest"> iOS берёт start_url и name ИЗ МАНИФЕСТА
+  // (/dashboard, «Память»), игнорируя текущий URL. Поэтому на этой странице
+  // манифест убираем — тогда iOS использует текущий URL + apple-mobile-web-app-title
+  // + apple-touch-icon. Всё восстанавливаем при уходе со страницы.
   useEffect(() => {
     if (!memorialPage) return;
 
+    const head = document.head;
+    const restorers: Array<() => void> = [];
+
+    // 1. Заголовок вкладки
     const prevTitle = document.title;
     document.title = `${memorialPage.fullName} — Память`;
+    restorers.push(() => { document.title = prevTitle; });
 
+    // 2. Имя ярлыка на iOS (apple-mobile-web-app-title приоритетнее <title>)
+    let appleTitle = head.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement | null;
+    const createdAppleTitle = !appleTitle;
+    const prevAppleTitle = appleTitle?.getAttribute('content') ?? null;
+    if (!appleTitle) {
+      appleTitle = document.createElement('meta');
+      appleTitle.setAttribute('name', 'apple-mobile-web-app-title');
+      head.appendChild(appleTitle);
+    }
+    appleTitle.setAttribute('content', memorialPage.fullName);
+    restorers.push(() => {
+      if (createdAppleTitle) appleTitle!.remove();
+      else if (prevAppleTitle !== null) appleTitle!.setAttribute('content', prevAppleTitle);
+    });
+
+    // 3. Убираем глобальный манифест — иначе iOS берёт его start_url/name
+    const manifestLink = head.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+    if (manifestLink) {
+      const parent = manifestLink.parentNode;
+      const next = manifestLink.nextSibling;
+      manifestLink.remove();
+      restorers.push(() => { parent?.insertBefore(manifestLink, next); });
+    }
+
+    // 4. Иконка ярлыка = портрет. Прячем дефолтные apple-touch-icon (SVG, iOS их
+    //    не поддерживает) и добавляем растровый портрет из Yandex Cloud.
     const iconHref = memorialPage.mainPhoto?.thumbnailUrl || memorialPage.mainPhoto?.url;
-    const createdLinks: HTMLLinkElement[] = [];
     if (iconHref) {
+      const hidden: Array<{ el: HTMLLinkElement; parent: Node | null; next: Node | null }> = [];
+      head
+        .querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]')
+        .forEach((el) => {
+          const link = el as HTMLLinkElement;
+          hidden.push({ el: link, parent: link.parentNode, next: link.nextSibling });
+          link.remove();
+        });
+
+      const created: HTMLLinkElement[] = [];
       for (const rel of ['apple-touch-icon', 'apple-touch-icon-precomposed']) {
         const link = document.createElement('link');
         link.rel = rel;
         link.href = iconHref;
-        document.head.appendChild(link);
-        createdLinks.push(link);
+        head.appendChild(link);
+        created.push(link);
       }
+
+      restorers.push(() => {
+        created.forEach((l) => l.remove());
+        hidden.forEach(({ el, parent, next }) => parent?.insertBefore(el, next));
+      });
     }
 
-    return () => {
-      document.title = prevTitle;
-      createdLinks.forEach((l) => l.remove());
-    };
+    return () => { restorers.reverse().forEach((fn) => fn()); };
   }, [memorialPage]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
