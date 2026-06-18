@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/authService';
 import { registerSchema, loginSchema, subscriptionUpdateSchema } from '../validation/auth';
 import { getFeatureAccess } from '../utils/subscription';
+import { setAuthCookie, clearAuthCookie } from '../utils/authToken';
 import { SubscriptionType } from '../types/auth';
 import { PrismaClient } from '@prisma/client';
 
@@ -23,6 +24,9 @@ export class AuthController {
 
       // Register user
       const result = await authService.register(value);
+
+      // Долговечная httpOnly-cookie (в дополнение к токену в ответе для localStorage)
+      if (result?.token) setAuthCookie(res, result.token);
 
       res.status(201).json({
         message: 'Пользователь успешно зарегистрирован',
@@ -50,6 +54,9 @@ export class AuthController {
 
       // Login user
       const result = await authService.login(value);
+
+      // Долговечная httpOnly-cookie (в дополнение к токену в ответе для localStorage)
+      if (result?.token) setAuthCookie(res, result.token);
 
       res.json({
         message: 'Успешный вход в систему',
@@ -162,8 +169,9 @@ export class AuthController {
   }
 
   async logout(_req: Request, res: Response): Promise<void> {
-    // Since we're using stateless JWT, logout is handled on the client side
-    // by removing the token. We just return a success message.
+    // JWT stateless: чистим httpOnly-cookie на сервере, токен в localStorage
+    // удаляет клиент.
+    clearAuthCookie(res);
     res.json({
       message: 'Успешный выход из системы'
     });

@@ -2,21 +2,30 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.optionalAuth = exports.requireAuth = exports.requireSubscription = exports.authenticateToken = void 0;
 const jwt_1 = require("../utils/jwt");
+const authToken_1 = require("../utils/authToken");
 const authService_1 = require("../services/authService");
 const subscription_1 = require("../utils/subscription");
 const authService = new authService_1.AuthService();
+const verifyFirstValid = (req) => {
+    for (const token of (0, authToken_1.getCandidateTokens)(req)) {
+        try {
+            return (0, jwt_1.verifyToken)(token);
+        }
+        catch {
+        }
+    }
+    return null;
+};
 const authenticateToken = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        const token = authHeader && authHeader.split(' ')[1];
-        if (!token) {
+        const decoded = verifyFirstValid(req);
+        if (!decoded) {
             res.status(401).json({
-                error: 'Токен доступа отсутствует',
-                code: 'MISSING_TOKEN'
+                error: 'Недействительный токен доступа',
+                code: 'INVALID_TOKEN'
             });
             return;
         }
-        const decoded = (0, jwt_1.verifyToken)(token);
         const user = await authService.getUserById(decoded.userId);
         req.user = user;
         req.featureAccess = (0, subscription_1.getFeatureAccess)(user.subscriptionType, user.subscriptionExpiresAt);
@@ -56,10 +65,8 @@ exports.requireSubscription = requireSubscription;
 exports.requireAuth = exports.authenticateToken;
 const optionalAuth = async (req, _res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        const token = authHeader && authHeader.split(' ')[1];
-        if (token) {
-            const decoded = (0, jwt_1.verifyToken)(token);
+        const decoded = verifyFirstValid(req);
+        if (decoded) {
             const user = await authService.getUserById(decoded.userId);
             req.user = user;
             req.featureAccess = (0, subscription_1.getFeatureAccess)(user.subscriptionType, user.subscriptionExpiresAt);

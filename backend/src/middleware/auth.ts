@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
+import { getCandidateTokens } from '../utils/authToken';
+import { JwtPayload } from '../types/auth';
 import { AuthService } from '../services/authService';
 import { getFeatureAccess } from '../utils/subscription';
 import { SubscriptionType, FeatureAccess } from '../types/auth';
@@ -22,22 +24,31 @@ declare global {
 
 const authService = new AuthService();
 
+// Перебирает кандидатов (Authorization header, затем cookie) и возвращает
+// payload первого валидного токена, либо null.
+const verifyFirstValid = (req: Request): JwtPayload | null => {
+  for (const token of getCandidateTokens(req)) {
+    try {
+      return verifyToken(token);
+    } catch {
+      // пробуем следующий кандидат
+    }
+  }
+  return null;
+};
+
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const decoded = verifyFirstValid(req);
 
-    if (!token) {
-      res.status(401).json({ 
-        error: 'Токен доступа отсутствует',
-        code: 'MISSING_TOKEN'
+    if (!decoded) {
+      res.status(401).json({
+        error: 'Недействительный токен доступа',
+        code: 'INVALID_TOKEN'
       });
       return;
     }
 
-    // Verify token
-    const decoded = verifyToken(token);
-    
     // Get fresh user data from database
     const user = await authService.getUserById(decoded.userId);
     
@@ -90,11 +101,9 @@ export const requireAuth = authenticateToken;
 // Optional authentication - doesn't fail if no token provided
 export const optionalAuth = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
+    const decoded = verifyFirstValid(req);
 
-    if (token) {
-      const decoded = verifyToken(token);
+    if (decoded) {
       const user = await authService.getUserById(decoded.userId);
       req.user = user;
       req.featureAccess = getFeatureAccess(

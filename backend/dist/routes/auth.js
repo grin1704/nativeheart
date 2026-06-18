@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const authController_1 = require("../controllers/authController");
 const auth_1 = require("../middleware/auth");
+const authToken_1 = require("../utils/authToken");
 const oauthService_1 = require("../services/oauthService");
 const router = (0, express_1.Router)();
 const authController = new authController_1.AuthController();
@@ -22,6 +23,8 @@ router.post('/vk/callback', async (req, res) => {
         if (!code)
             return res.status(400).json({ error: 'Код авторизации обязателен' });
         const result = await oauthService_1.oauthService.handleVkCallback(code, device_id || '', state || '');
+        if (result?.token)
+            (0, authToken_1.setAuthCookie)(res, result.token);
         res.json({ success: true, data: result });
     }
     catch (error) {
@@ -38,6 +41,8 @@ router.post('/yandex/callback', async (req, res) => {
         if (!code)
             return res.status(400).json({ error: 'Код авторизации обязателен' });
         const result = await oauthService_1.oauthService.handleYandexCallback(code);
+        if (result?.token)
+            (0, authToken_1.setAuthCookie)(res, result.token);
         res.json({ success: true, data: result });
     }
     catch (error) {

@@ -35,9 +35,10 @@ export default function CreateMemorialPage() {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/memorial-pages', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           fullName: data.fullName,

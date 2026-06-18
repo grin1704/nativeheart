@@ -2,11 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.optionalAuth = void 0;
 const jwt_1 = require("../utils/jwt");
+const authToken_1 = require("../utils/authToken");
 const optionalAuth = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.substring(7);
+        for (const token of (0, authToken_1.getCandidateTokens)(req)) {
             try {
                 const decoded = (0, jwt_1.verifyToken)(token);
                 req.user = {
@@ -19,6 +18,7 @@ const optionalAuth = async (req, res, next) => {
                     oauthProvider: null,
                     oauthId: null,
                 };
+                break;
             }
             catch (error) {
             }

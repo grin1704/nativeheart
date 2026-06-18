@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { MemorialPageView } from '@/components/MemorialPageView';
+import { AddToHomeScreen } from '@/components/AddToHomeScreen';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MemorialPage {
   id: string;
@@ -37,7 +40,8 @@ interface MemorialPage {
 export default function PublicMemorialPage() {
   const params = useParams();
   const slug = params.slug as string;
-  
+  const { user } = useAuth();
+
   const [memorialPage, setMemorialPage] = useState<MemorialPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +87,33 @@ export default function PublicMemorialPage() {
       fetchMemorialPage();
     }
   }, [slug]);
+
+  // Персональные метаданные страницы: имя в заголовке и портрет как иконка.
+  // iOS считывает title и apple-touch-icon в момент «Добавить на экран „Домой"»,
+  // поэтому ярлык получает имя и фото покойного, а не общий логотип сервиса.
+  useEffect(() => {
+    if (!memorialPage) return;
+
+    const prevTitle = document.title;
+    document.title = `${memorialPage.fullName} — Память`;
+
+    const iconHref = memorialPage.mainPhoto?.thumbnailUrl || memorialPage.mainPhoto?.url;
+    const createdLinks: HTMLLinkElement[] = [];
+    if (iconHref) {
+      for (const rel of ['apple-touch-icon', 'apple-touch-icon-precomposed']) {
+        const link = document.createElement('link');
+        link.rel = rel;
+        link.href = iconHref;
+        document.head.appendChild(link);
+        createdLinks.push(link);
+      }
+    }
+
+    return () => {
+      document.title = prevTitle;
+      createdLinks.forEach((l) => l.remove());
+    };
+  }, [memorialPage]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +207,8 @@ export default function PublicMemorialPage() {
     );
   }
 
+  const isOwner = !!user && user.id === memorialPage.owner.id;
+
   // Use the new MemorialPageView component with proper type conversion
   const memorialPageWithDetails = {
     ...memorialPage,
@@ -198,5 +231,25 @@ export default function PublicMemorialPage() {
     },
   };
 
-  return <MemorialPageView memorialPage={memorialPageWithDetails as any} />;
+  return (
+    <>
+      <MemorialPageView memorialPage={memorialPageWithDetails as any} />
+
+      {/* Плавающая панель: владелец видит «Редактировать», все — «Добавить на экран» */}
+      <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 print:hidden">
+        {isOwner && (
+          <Link
+            href={`/dashboard/edit/${memorialPage.id}`}
+            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-indigo-700"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Редактировать
+          </Link>
+        )}
+        <AddToHomeScreen />
+      </div>
+    </>
+  );
 }

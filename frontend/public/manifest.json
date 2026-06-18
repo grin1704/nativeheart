@@ -2,7 +2,7 @@
   "name": "Сервис памятных страниц",
   "short_name": "Память",
   "description": "Создавайте цифровые памятники для ваших близких",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",

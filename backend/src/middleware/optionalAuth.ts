@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
+import { getCandidateTokens } from '../utils/authToken';
 import { AuthenticatedRequest } from '../types/auth';
 
 /**
@@ -8,11 +9,8 @@ import { AuthenticatedRequest } from '../types/auth';
  */
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      
+    // Перебираем кандидатов (Authorization header, затем cookie)
+    for (const token of getCandidateTokens(req)) {
       try {
         const decoded = verifyToken(token);
         // Transform JWT payload to user object
@@ -26,12 +24,12 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
           oauthProvider: null,
           oauthId: null,
         };
+        break; // нашли валидный — дальше не пробуем
       } catch (error) {
-        // Invalid token, but we don't throw error for optional auth
-        // Just continue without user info
+        // Invalid token, пробуем следующий кандидат
       }
     }
-    
+
     next();
   } catch (error) {
     next(error);

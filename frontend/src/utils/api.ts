@@ -17,6 +17,7 @@ export async function apiRequest<T = any>(
     
     const config: RequestInit = {
       method,
+      credentials: 'include', // отправляем httpOnly-cookie, если localStorage пуст
       headers: {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -58,6 +59,7 @@ export async function uploadFile(file: File, endpoint: string): Promise<ApiRespo
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
+      credentials: 'include', // отправляем httpOnly-cookie, если localStorage пуст
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
       },

@@ -18,27 +18,26 @@ export function useAuth() {
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
+        // Запрашиваем профиль даже без токена в localStorage: авторизация
+        // может держаться на httpOnly-cookie (важно для Safari/PWA, где
+        // localStorage очищается через 7 дней по ITP).
         const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers,
+          credentials: 'include',
         });
 
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
         } else {
-          // Token is invalid, remove it
+          // Сессии нет ни в токене, ни в cookie — чистим устаревший токен
           localStorage.removeItem('token');
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('token');
       } finally {
         setLoading(false);
       }
@@ -52,7 +51,18 @@ export function useAuth() {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Просим сервер удалить httpOnly-cookie, иначе сессия восстановится
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+    } catch (error) {
+      // Сеть недоступна — всё равно чистим локальное состояние
+    }
     localStorage.removeItem('token');
     setUser(null);
   };

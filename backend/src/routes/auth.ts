@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/authController';
 import { authenticateToken } from '../middleware/auth';
+import { setAuthCookie } from '../utils/authToken';
 import { oauthService } from '../services/oauthService';
 
 const router = Router();
@@ -24,6 +25,7 @@ router.post('/vk/callback', async (req, res) => {
     const { code, device_id, state } = req.body;
     if (!code) return res.status(400).json({ error: 'Код авторизации обязателен' });
     const result = await oauthService.handleVkCallback(code, device_id || '', state || '');
+    if (result?.token) setAuthCookie(res, result.token);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('VK callback error:', error);
@@ -40,6 +42,7 @@ router.post('/yandex/callback', async (req, res) => {
     const { code } = req.body;
     if (!code) return res.status(400).json({ error: 'Код авторизации обязателен' });
     const result = await oauthService.handleYandexCallback(code);
+    if (result?.token) setAuthCookie(res, result.token);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Yandex callback error:', error);

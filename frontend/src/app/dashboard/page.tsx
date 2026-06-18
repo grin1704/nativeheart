@@ -35,12 +35,8 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
-
+    // Авторизацию проверяем через /auth/me (см. loadUserData), а не по наличию
+    // токена в localStorage — сессия может держаться на httpOnly-cookie.
     loadUserData();
 
     // Reload user data when page becomes visible (e.g., after email verification)
@@ -61,16 +57,20 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       // Загружаем данные пользователя
       const userResponse = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers,
+        credentials: 'include',
       });
 
       if (!userResponse.ok) {
-        throw new Error('Ошибка загрузки данных пользователя');
+        // Нет валидной сессии (ни токен, ни cookie) — на вход с возвратом
+        localStorage.removeItem('token');
+        router.push('/auth/login?redirect=/dashboard');
+        return;
       }
 
       const userData = await userResponse.json();
@@ -78,9 +78,8 @@ export default function Dashboard() {
 
       // Загружаем памятные страницы пользователя
       const pagesResponse = await fetch('/api/memorial-pages/my', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers,
+        credentials: 'include',
       });
 
       if (pagesResponse.ok) {
@@ -94,7 +93,18 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      // Чистим httpOnly-cookie на сервере, иначе сессия восстановится
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch {
+      // сеть недоступна — всё равно чистим локальное состояние
+    }
     localStorage.removeItem('token');
     router.push('/');
   };
@@ -106,9 +116,8 @@ export default function Dashboard() {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/memorial-pages/${pageToDelete.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (!response.ok) {

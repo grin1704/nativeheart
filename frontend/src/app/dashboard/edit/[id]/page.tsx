@@ -56,12 +56,8 @@ export default function MemorialPageEditor() {
   const pageId = params.id as string;
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
+    // Авторизацию проверяем через /auth/me (см. loadData), а не по наличию
+    // токена в localStorage — сессия может держаться на httpOnly-cookie.
     loadData();
   }, [pageId, router]);
 
@@ -72,7 +68,10 @@ export default function MemorialPageEditor() {
       // Load user data
       const userResponse = await apiRequest<any>('GET', '/auth/me');
       if (!userResponse.success) {
-        throw new Error(userResponse.error || 'Ошибка загрузки данных пользователя');
+        // Нет валидной сессии (ни токен, ни cookie) — на вход с возвратом сюда
+        localStorage.removeItem('token');
+        router.push(`/auth/login?redirect=${encodeURIComponent(`/dashboard/edit/${pageId}`)}`);
+        return;
       }
       // Backend returns { user: {...} }, so we need to extract the user object
       const userData = userResponse.data?.user || userResponse.data;

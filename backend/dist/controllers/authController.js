@@ -4,6 +4,7 @@ exports.AuthController = void 0;
 const authService_1 = require("../services/authService");
 const auth_1 = require("../validation/auth");
 const subscription_1 = require("../utils/subscription");
+const authToken_1 = require("../utils/authToken");
 const client_1 = require("@prisma/client");
 const authService = new authService_1.AuthService();
 const prisma = new client_1.PrismaClient();
@@ -19,6 +20,8 @@ class AuthController {
                 return;
             }
             const result = await authService.register(value);
+            if (result?.token)
+                (0, authToken_1.setAuthCookie)(res, result.token);
             res.status(201).json({
                 message: 'Пользователь успешно зарегистрирован',
                 data: result
@@ -42,6 +45,8 @@ class AuthController {
                 return;
             }
             const result = await authService.login(value);
+            if (result?.token)
+                (0, authToken_1.setAuthCookie)(res, result.token);
             res.json({
                 message: 'Успешный вход в систему',
                 data: result
@@ -133,6 +138,7 @@ class AuthController {
         }
     }
     async logout(_req, res) {
+        (0, authToken_1.clearAuthCookie)(res);
         res.json({
             message: 'Успешный выход из системы'
         });
