@@ -2,6 +2,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Ограничиваем heap Node и отключаем телеметрию, чтобы сборка проходила
+# на слабых серверах (1 ГБ ОЗУ) без OOM при next build.
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--max-old-space-size=768
+
 # Копируем package.json и устанавливаем зависимости
 COPY package*.json ./
 RUN npm install
